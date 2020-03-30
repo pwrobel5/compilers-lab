@@ -86,6 +86,7 @@ lexer = lex.lex()
 precedence = (
     ('left', '+', '-'),
     ('left', '*', '/'),
+    ('left', 'POWER'),
     ('right', 'UMINUS'),
 )
 
@@ -117,9 +118,12 @@ def p_expression_binop(p):
         p[0] = p[1] / p[3]
 
 def p_expression_power(p):
-    'expression : expression POWER NUMBER'
+    'expression : expression POWER expression'
     p[0] = p[1] ** p[3]
 
+def p_expression_function(p):
+    'expression : FUNCTION '
+    pass
 
 def p_expression_uminus(p):
     "expression : '-' expression %prec UMINUS"
