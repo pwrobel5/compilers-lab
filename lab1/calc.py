@@ -20,7 +20,7 @@ t_FUNCTION = r'(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)'
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
 def t_POWER(t):
-    r'(?<=\d)(\*\*)(?=\d)'
+    r'\*\*'
     t.value = '^'
     return t
 
