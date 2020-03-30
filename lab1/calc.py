@@ -3,6 +3,8 @@
 #
 # A simple calculator with variables.   This is from O'Reilly's
 # "Lex and Yacc", p. 63.
+#
+# based on https://github.com/dabeaz/ply/blob/master/example/calc/calc.py
 # -----------------------------------------------------------------------------
 
 import sys
