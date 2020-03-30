@@ -12,13 +12,8 @@ sys.path.insert(0, "../..")
 
 import math
 
-states = (
-    ('text','inclusive'),
-)
-
 tokens = (
-    'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS', 'EQUALS_IGNORED',
-    'TEXT', 'TEXT_BEGIN', 'TEXT_END', 'EQUATION'
+    'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS', 'EQUALS_IGNORED'
 )
 
 literals = ['=', '+', '-', '*', '/', '(', ')']
@@ -28,17 +23,6 @@ equals_number = 0
 
 t_FUNCTION = r'(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)'
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
-
-t_text_EQUATION = r'\$ .* \$'
-t_text_TEXT = r'\w+'
-
-def t_TEXT_BEGIN(t):
-    r'\\text'
-    t.lexer.begin('text')
-
-def t_text_TEXT_END(t):
-    r'\\text_end'
-    t.lexer.begin('INITIAL')
 
 def t_EQUALS_IGNORED(t):
     r'=(?!\s*\S+)'
