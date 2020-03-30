@@ -19,7 +19,7 @@ literals = ['=', '+', '-', '*', '/', '(', ')']
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
 def t_REAL(t):
-    r'[0-9]+\.[0-9]*|\.[0-9]+'
+    r'\d+\.\d*|\.\d+'
     t.value = float(t.value)
     return t
 
