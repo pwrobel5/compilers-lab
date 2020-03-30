@@ -16,7 +16,7 @@ literals = ['=', '+', '-', '*', '/', '(', ')']
 
 # Tokens
 
-t_FUNCTION = r'(sin|cos|exp|sqrt|log|tan|atan) (?=\d+|\(.*\))'
+t_FUNCTION = r'(sin|cos|exp|sqrt|log|tan|atan) (?=\d+|\(.*\)) (?i)'
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
 def t_REAL(t):
