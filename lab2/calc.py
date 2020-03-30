@@ -10,6 +10,8 @@
 import sys
 sys.path.insert(0, "../..")
 
+import math
+
 states = (
     ('text','inclusive'),
 )
@@ -87,6 +89,7 @@ precedence = (
     ('left', '+', '-'),
     ('left', '*', '/'),
     ('left', 'POWER'),
+    ('right', 'FUNCTION'),
     ('right', 'UMINUS'),
 )
 
@@ -122,8 +125,8 @@ def p_expression_power(p):
     p[0] = p[1] ** p[3]
 
 def p_expression_function(p):
-    'expression : FUNCTION '
-    pass
+    'expression : FUNCTION expression'
+    p[0] = getattr(math, p[1])(p[2])
 
 def p_expression_uminus(p):
     "expression : '-' expression %prec UMINUS"
