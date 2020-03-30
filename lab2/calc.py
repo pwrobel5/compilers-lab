@@ -68,6 +68,7 @@ precedence = (
     ('left', 'POWER'),
     ('right', 'FUNCTION'),
     ('right', 'UMINUS'),
+    ('left', ';')
 )
 
 # dictionary of names
@@ -81,13 +82,8 @@ def p_expression_ignored_eq(p):
     'expression : EQUALS_IGNORED'
     pass
 
-def p_empty(p):
-    'empty :'
-    pass
-
 def p_statement_multi(p):
-    '''statement : statement ';' statement
-                 | empty'''
+    '''statement : statement ';' statement'''
 
 def p_statement_expr(p):
     'statement : expression'
