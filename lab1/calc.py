@@ -9,13 +9,14 @@ import sys
 sys.path.insert(0, "../..")
 
 tokens = (
-    'NAME', 'REAL', 'NUMBER'
+    'NAME', 'REAL', 'NUMBER', 'FUNCTION'
 )
 
 literals = ['=', '+', '-', '*', '/', '(', ')']
 
 # Tokens
 
+t_FUNCTION = r'(sin|cos|exp|sqrt|log|tan|atan) (?=\d+|\(.*\))'
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
 def t_REAL(t):
