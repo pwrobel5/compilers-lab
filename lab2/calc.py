@@ -116,6 +116,10 @@ def p_expression_binop(p):
     elif p[2] == '/':
         p[0] = p[1] / p[3]
 
+def p_expression_power(p):
+    'expression : expression POWER NUMBER'
+    p[0] = p[1] ** p[3]
+
 
 def p_expression_uminus(p):
     "expression : '-' expression %prec UMINUS"
