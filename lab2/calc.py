@@ -13,7 +13,8 @@ sys.path.insert(0, "../..")
 import math
 
 tokens = (
-    'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS', 'EQUALS_IGNORED'
+    'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS', 'EQUALS_IGNORED',
+    'RELATIONAL'
 )
 
 literals = ['=', '+', '-', '*', '/', '(', ')']
@@ -23,6 +24,7 @@ equals_number = 0
 
 t_FUNCTION = r'(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)'
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
+t_RELATIONAL = r'(<|>|<=|>=|!=|==)'
 
 def t_EQUALS_IGNORED(t):
     r'=(?!\s*\S+)'
@@ -116,6 +118,20 @@ def p_expression_uminus(p):
     "expression : '-' expression %prec UMINUS"
     p[0] = -p[2]
 
+def p_expression_relational(p):
+    'expression : expression RELATIONAL expression'
+    if p[2] == '==':
+        p[0] = p[1] == p[3]
+    elif p[2] == "!=":
+        p[0] = p[1] != p[3]
+    elif p[2] == ">":
+        p[0] = p[1] > p[3]
+    elif p[2] == ">=":
+        p[0] = p[1] >= p[3]
+    elif p[2] == "<":
+        p[0] = p[1] < p[3]
+    elif p[2] == "<=":
+        p[0] = p[1] <= p[3]
 
 def p_expression_group(p):
     "expression : '(' expression ')'"
