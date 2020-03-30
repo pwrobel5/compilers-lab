@@ -9,15 +9,30 @@ import sys
 sys.path.insert(0, "../..")
 
 tokens = (
-    'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER'
+    'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS', 'EQUALS_IGNORED'
 )
 
 literals = ['=', '+', '-', '*', '/', '(', ')']
+equals_number = 0
 
 # Tokens
 
 t_FUNCTION = r'(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)'
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
+
+def t_EQUALS_IGNORED(t):
+    r'=(?!\s*\S+)'
+    pass
+
+def t_EQUALS(t):
+    r'='
+    global equals_number
+    equals_number += 1
+    if equals_number > 1:
+        print("Too many equals signs! Expected 1 got %d" % equals_number)
+        t.lexer.skip(1)
+    else:
+        return t
 
 def t_POWER(t):
     r'\*\*'
@@ -50,6 +65,7 @@ lexer = lex.lex()
 
 while True:
     try:
+        equals_number = 0
         s = input('calc > ')
     except EOFError:
         break
