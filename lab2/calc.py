@@ -7,9 +7,6 @@
 # based on https://github.com/dabeaz/ply/blob/master/example/calc/calc.py
 # -----------------------------------------------------------------------------
 
-import sys
-sys.path.insert(0, "../..")
-
 import math
 
 tokens = (
@@ -18,7 +15,6 @@ tokens = (
 )
 
 literals = ['=', '+', '-', '*', '/', '(', ')', ';']
-equals_number = 0
 
 # Tokens
 
@@ -32,13 +28,7 @@ def t_EQUALS_IGNORED(t):
 
 def t_EQUALS(t):
     r'='
-    global equals_number
-    equals_number += 1
-    if equals_number > 1:
-        print("Too many equals signs! Expected 1 got %d" % equals_number)
-        t.lexer.skip(1)
-    else:
-        return t
+    return t
 
 def t_POWER(t):
     r'\*\*'
