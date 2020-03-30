@@ -17,7 +17,7 @@ tokens = (
     'RELATIONAL'
 )
 
-literals = ['=', '+', '-', '*', '/', '(', ')']
+literals = ['=', '+', '-', '*', '/', '(', ')', ';']
 equals_number = 0
 
 # Tokens
@@ -91,11 +91,17 @@ def p_expression_ignored_eq(p):
     'expression : EQUALS_IGNORED'
     pass
 
+def p_empty(p):
+    'empty :'
+    pass
+
+def p_statement_multi(p):
+    '''statement : statement ';' statement
+                 | empty'''
 
 def p_statement_expr(p):
     'statement : expression'
     print(p[1])
-
 
 def p_expression_binop(p):
     '''expression : expression '+' expression
@@ -158,7 +164,6 @@ def p_expression_name(p):
     except LookupError:
         print("Undefined name '%s'" % p[1])
         p[0] = 0
-
 
 def p_error(p):
     if p:
