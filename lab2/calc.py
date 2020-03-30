@@ -131,6 +131,9 @@ def p_expression_number(p):
     "expression : NUMBER"
     p[0] = p[1]
 
+def p_expression_real(p):
+    "expression : REAL"
+    p[0] = p[1]
 
 def p_expression_name(p):
     "expression : NAME"
