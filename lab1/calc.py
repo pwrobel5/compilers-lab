@@ -19,7 +19,7 @@ literals = ['=', '+', '-', '*', '/', '(', ')']
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
 def t_REAL(t):
-    r'[0-9]+.[0-9]*'
+    r'[0-9]+\.[0-9]*|\.[0-9]+'
     t.value = float(t.value)
     return t
 
@@ -49,6 +49,8 @@ while True:
         break
     if not s:
         continue
+    elif s.lower() == "exit":
+        break
 
     lexer.input(s)
     while True:
