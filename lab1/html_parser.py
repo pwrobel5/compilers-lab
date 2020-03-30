@@ -1,18 +1,85 @@
-tokens = ('BOLD', 'LISTSINGLE', 'CONTENTS')
+tokens = (
+    'BOLD',
+    'ORD_LIST',
+    'UNORD_LIST',
+    'LISTELEMENT',
+    'LISTELEMENT_END',
+    'CONTENTS'
+)
+
+states = (
+    ('orderedlist', 'inclusive'),
+    ('unorderedlist', 'inclusive')
+)
 
 def t_BOLD(t):
-    r'<b>|<B>|</b>|</B>'
+    r'(<b>|</b>) (?i)'
     t.value = '**'
     return t
 
-def t_LISTSINGLE(t):
-    r'<li>|</li>|<LI>|</LI>'
-    t.value = '* '
+def t_ORD_LIST(t):
+    r'<ol>(?i)'
+    t.lexer.begin('orderedlist')
     return t
+
+def t_orderedlist_ORD_LIST(t):
+    r'</ol>(?i)'
+    t.lexer.begin('INITIAL')
+    return t
+
+def t_UNORD_LIST(t):
+    r'<ul>(?i)'
+    t.lexer.begin('unorderedlist')
+    return t
+
+def t_unorderedlist_UNORD_LIST(t):
+    r'</ul>(?i)'
+    t.lexer.begin('INITIAL')
+    return t
+
+list_element_state = 0
+
+def t_orderedlist_LISTELEMENT(t):
+    r'<li>(?i)'
+    t.value = '1 '
+    global list_element_state
+    if list_element_state == 1:
+        print("Incorrect list!")
+    else:
+        list_element_state = 1
+        return t
+
+def t_orderedlist_LISTELEMENT_END(t):
+    r'</li>(?i)'
+    global list_element_state
+    if list_element_state == 0:
+        print("Incorrect list!")
+    else:
+        list_element_state = 0
+        return t
+
+def t_unorderedlist_LISTELEMENT(t):
+    r'<li>(?i)'
+    t.value = '* '
+    global list_element_state
+    if list_element_state == 1:
+        print("Incorrect list!")
+    else:
+        list_element_state = 1
+        return t
+
+def t_unorderedlist_LISTELEMENT_END(t):
+    r'</li>(?i)'
+    global list_element_state
+    if list_element_state == 0:
+        print("Incorrect list!")
+    else:
+        list_element_state = 0
+        return t
 
 t_CONTENTS = r'[ \t]*[a-zA-Z_ \t][a-zA-Z0-9_ \t]*'
 
-t_ignore = r'<[a-zA-Z_ \t]*>'
+t_ignore = " \t"
 
 def t_error(t):
     print("Illegal character '%s'" % t.value[0])
@@ -28,6 +95,8 @@ while True:
         break
     if not s:
         continue
+    elif s.lower() == "exit":
+        break
 
     lexer.input(s)
     while True:
@@ -35,4 +104,3 @@ while True:
         if not tok:
             break
         print(tok)
-# dorobic rozroznianie lsty punktowej i numerowanej, markdown serie 1. 1. 1. ... sobie przerobi na dobre numery
