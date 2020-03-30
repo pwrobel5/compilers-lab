@@ -72,6 +72,7 @@ lexer = lex.lex()
 # Parsing rules
 
 precedence = (
+    ('left', 'RELATIONAL'),
     ('left', '+', '-'),
     ('left', '*', '/'),
     ('left', 'POWER'),
@@ -83,8 +84,12 @@ precedence = (
 names = {}
 
 def p_statement_assign(p):
-    'statement : NAME "=" expression'
+    'statement : NAME EQUALS expression'
     names[p[1]] = p[3]
+
+def p_expression_ignored_eq(p):
+    'expression : EQUALS_IGNORED'
+    pass
 
 
 def p_statement_expr(p):
