@@ -17,22 +17,30 @@ reserved = {
     'function' : 'CUSTOMFUNC',
     'procedure' : 'PROCEDURE',
     'return' : 'RETURN',
-    'end' : 'END'
+    'end' : 'END',
+    'print' : 'PRINT'
 }
 
 tokens = [
     'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS', 'EQUALS_IGNORED',
-    'RELATIONAL', 'INCR', 'DECR'
+    'RELATIONAL', 'INCR', 'DECR', 'BESSEL'
 ] + list(reserved.values())
 
-literals = ['=', '+', '-', '*', '/', '(', ')', ';', ',']
+literals = ['=', '+', '-', '*', '/', '(', ')', ';', ',', '%']
 
 # Tokens
 
-t_FUNCTION = r'(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)'
 t_RELATIONAL = r'(<|>|<=|>=|!=|==)'
 t_INCR = r'\+\+'
 t_DECR = r'--'
+
+def t_FUNCTION(t):
+    r'(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)'
+    return t
+
+def t_BESSEL(t):
+    r'j (?i) (?=\d+|\(.*\))'
+    return t
 
 def t_NAME(t):
     r'[a-zA-Z_][a-zA-Z0-9_]*'
@@ -83,7 +91,7 @@ precedence = (
     ('nonassoc', 'ELSE'),
     ('nonassoc', 'RELATIONAL'),
     ('left', '+', '-'),
-    ('left', '*', '/'),
+    ('left', '*', '/', '%'),
     ('left', 'POWER'),
     ('right', 'FUNCTION'),    
     ('left', ';'),
@@ -115,7 +123,15 @@ def p_statement_other(p):
                  | loop
                  | assignment
                  | customfunc
-                 | procedure'''
+                 | procedure
+                 | print'''
+
+def p_print(p):
+    '''print : PRINT '(' NAME ')' '''
+    try:
+        print(names[p[3]])
+    except LookupError:
+        print("Incorrect identifier!")
 
 def p_statement_assign(p):
     'assignment : NAME EQUALS expression'
@@ -151,7 +167,8 @@ def p_expression_binop(p):
     '''expression : expression '+' expression
                   | expression '-' expression
                   | expression '*' expression
-                  | expression '/' expression'''
+                  | expression '/' expression
+                  | expression '%' expression'''
     if p[2] == '+':
         p[0] = p[1] + p[3]
     elif p[2] == '-':
@@ -160,6 +177,8 @@ def p_expression_binop(p):
         p[0] = p[1] * p[3]
     elif p[2] == '/':
         p[0] = p[1] / p[3]
+    elif p[2] == '%':
+        p[0] = p[1] % p[3]
 
 def p_expression_prefix(p):
     '''expression : INCR NAME
@@ -195,6 +214,12 @@ def p_expression_power(p):
 def p_expression_function(p):
     'expression : FUNCTION expression'
     p[0] = getattr(math, p[1])(p[2])
+
+
+from scipy.special import jv
+def p_expression_bessel(p):
+    '''expression : BESSEL '(' NUMBER ',' expression ')' '''
+    p[0] = jv(p[3], p[5])
 
 def p_expression_uminus(p):
     "expression : '-' expression %prec UMINUS"
@@ -257,7 +282,7 @@ while True:
         break
 
     yacc.parse(s)
-    '''
+    ''' 
     lexer.input(s)
     while True:
         tok = lexer.token()
