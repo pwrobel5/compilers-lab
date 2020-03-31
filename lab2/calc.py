@@ -22,7 +22,7 @@ reserved = {
 
 tokens = [
     'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS', 'EQUALS_IGNORED',
-    'RELATIONAL'
+    'RELATIONAL', 'INCR', 'DECR'
 ] + list(reserved.values())
 
 literals = ['=', '+', '-', '*', '/', '(', ')', ';', ',']
@@ -31,6 +31,8 @@ literals = ['=', '+', '-', '*', '/', '(', ')', ';', ',']
 
 t_FUNCTION = r'(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)'
 t_RELATIONAL = r'(<|>|<=|>=|!=|==)'
+t_INCR = r'\+\+'
+t_DECR = r'--'
 
 def t_NAME(t):
     r'[a-zA-Z_][a-zA-Z0-9_]*'
@@ -85,7 +87,8 @@ precedence = (
     ('left', 'POWER'),
     ('right', 'FUNCTION'),    
     ('left', ';'),
-    ('right', 'UMINUS')
+    ('right', 'UMINUS'),
+    ('nonassoc', 'INCR', 'DECR')
 )
 
 # dictionary of names
@@ -157,6 +160,33 @@ def p_expression_binop(p):
         p[0] = p[1] * p[3]
     elif p[2] == '/':
         p[0] = p[1] / p[3]
+
+def p_expression_prefix(p):
+    '''expression : INCR NAME
+                  | DECR NAME'''
+    try:
+        if p[1] == '++':
+            names[p[2]] += 1
+        elif p[1] == '--':
+            names[p[2]] -= 1
+        
+        p[0] = names[p[2]]
+    except LookupError:
+        print("Incorrect identifier!")
+        p[0] = 0
+
+def p_expression_postfix(p):
+    '''expression : NAME INCR
+                  | NAME DECR'''
+    try:
+        p[0] = names[p[1]]
+        if p[2] == '++':        
+            names[p[1]] += 1
+        elif p[2] == '--':
+            names[p[1]] -= 1
+    except LookupError:
+        print("Incorrect identifier!")
+        p[0] = 0
 
 def p_expression_power(p):
     'expression : expression POWER expression'
