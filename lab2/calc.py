@@ -16,7 +16,8 @@ reserved = {
     'for' : 'FOR',
     'function' : 'CUSTOMFUNC',
     'procedure' : 'PROCEDURE',
-    'return' : 'RETURN'
+    'return' : 'RETURN',
+    'end' : 'END'
 }
 
 tokens = [
@@ -24,7 +25,7 @@ tokens = [
     'RELATIONAL'
 ] + list(reserved.values())
 
-literals = ['=', '+', '-', '*', '/', '(', ')', ';']
+literals = ['=', '+', '-', '*', '/', '(', ')', ';', ',']
 
 # Tokens
 
@@ -76,7 +77,7 @@ lexer = lex.lex()
 # Parsing rules
 
 precedence = (
-    ('nonassoc', 'IFX', 'WHILEX', 'FORX'),
+    ('nonassoc', 'IFX', 'WHILEX', 'FORX', 'CUSTOMFUNCX', 'PROCX'),
     ('nonassoc', 'ELSE'),
     ('nonassoc', 'RELATIONAL'),
     ('left', '+', '-'),
@@ -109,7 +110,9 @@ def p_statement_expr(p):
 def p_statement_other(p):
     '''statement : conditional
                  | loop
-                 | assignment'''
+                 | assignment
+                 | customfunc
+                 | procedure'''
 
 def p_statement_assign(p):
     'assignment : NAME EQUALS expression'
@@ -127,8 +130,19 @@ def p_while(p):
     '''loop : WHILE '(' relation ')' statement %prec WHILEX '''
 
 def p_for(p):
-    '''loop : FOR '(' assignment ';' relation ';' assignment ')' statement %prec FORX '''
-    pass
+    '''loop : FOR '(' assignment ';' relation ';' assignment ')' statement %prec FORX'''
+
+def p_customfunc(p):
+    '''customfunc : CUSTOMFUNC NAME '(' arglist ')' statement RETURN NAME %prec CUSTOMFUNCX
+                  | CUSTOMFUNC NAME '(' ')' statement RETURN NAME %prec CUSTOMFUNCX'''
+
+def p_procedure(p):
+    '''procedure : PROCEDURE NAME '(' arglist ')' statement END %prec PROCX
+                 | PROCEDURE NAME '(' ')' statement END %prec PROCX'''
+
+def p_arglist(p):
+    '''arglist : NAME
+               | NAME ',' arglist  '''
 
 def p_expression_binop(p):
     '''expression : expression '+' expression
