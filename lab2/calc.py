@@ -9,18 +9,27 @@
 
 import math
 
-tokens = (
+reserved = {
+    'if' : 'IF',
+    'fi' : 'FI'
+}
+
+tokens = [
     'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS', 'EQUALS_IGNORED',
     'RELATIONAL'
-)
+] + list(reserved.values())
 
 literals = ['=', '+', '-', '*', '/', '(', ')', ';']
 
 # Tokens
 
 t_FUNCTION = r'(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)'
-t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 t_RELATIONAL = r'(<|>|<=|>=|!=|==)'
+
+def t_NAME(t):
+    r'[a-zA-Z_][a-zA-Z0-9_]*'
+    t.type = reserved.get(t.value.lower(), 'NAME')
+    return t
 
 def t_EQUALS_IGNORED(t):
     r'=(?!\s*\S+)'
@@ -66,9 +75,10 @@ precedence = (
     ('left', '+', '-'),
     ('left', '*', '/'),
     ('left', 'POWER'),
-    ('right', 'FUNCTION'),
-    ('right', 'UMINUS'),
-    ('left', ';')
+    ('right', 'FUNCTION'),    
+    ('left', ';'),
+    ('right', 'IF'),
+    ('right', 'UMINUS')
 )
 
 # dictionary of names
@@ -83,11 +93,23 @@ def p_expression_ignored_eq(p):
     pass
 
 def p_statement_multi(p):
-    '''statement : statement ';' statement'''
+    '''statement : statement ';' statement
+                 | empty'''
+
+def p_empty(p):
+    'empty : '
 
 def p_statement_expr(p):
     'statement : expression'
     print(p[1])
+
+def p_statement_other(p):
+    'statement : conditional'
+
+def p_conditional(p):
+    '''conditional : IF '(' expression ')' statement FI '''
+    if p[3]:
+        p[0] = p[5]
 
 def p_expression_binop(p):
     '''expression : expression '+' expression
@@ -115,7 +137,7 @@ def p_expression_uminus(p):
     "expression : '-' expression %prec UMINUS"
     p[0] = -p[2]
 
-def p_expression_relational(p):
+def p_relation(p):
     'expression : expression RELATIONAL expression'
     if p[2] == '==':
         p[0] = p[1] == p[3]
@@ -172,3 +194,11 @@ while True:
         break
 
     yacc.parse(s)
+    '''
+    lexer.input(s)
+    while True:
+        tok = lexer.token()
+        if not tok:
+            break
+        print(tok)
+    '''
