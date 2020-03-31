@@ -22,7 +22,7 @@ reserved = {
 }
 
 tokens = [
-    'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS', 'EQUALS_IGNORED',
+    'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS',
     'RELATIONAL', 'INCR', 'DECR', 'BESSEL'
 ] + list(reserved.values())
 
@@ -46,10 +46,6 @@ def t_NAME(t):
     r'[a-zA-Z_][a-zA-Z0-9_]*'
     t.type = reserved.get(t.value.lower(), 'NAME')
     return t
-
-def t_EQUALS_IGNORED(t):
-    r'=(?!\s*\S+)'
-    pass
 
 def t_EQUALS(t):
     r'='
@@ -105,10 +101,6 @@ names = {}
 def p_statement_multi(p):
     '''statement : statement ';' statement
                  | empty'''
-
-def p_expression_ignored_eq(p):
-    'expression : EQUALS_IGNORED'
-    pass
 
 def p_empty(p):
     'empty : '
