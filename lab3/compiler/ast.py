@@ -7,6 +7,24 @@ class Node(object):
         return str(hash(self))
 
 
+class Statement(Node):
+    def __init__(self, statement_body):
+        self._body = statement_body
+
+    def execute(self, names):
+        return self._body.execute(names)
+
+
+class ConditionalIf(Node):
+    def __init__(self, condition, statement):
+        self._condition = condition
+        self._statement = statement
+
+    def execute(self, names):
+        if self._condition.execute(names):
+            self._statement.execute(names)
+
+
 class PreFixExpression(Node):
     def __init__(self, name, operation):
         self._name = name

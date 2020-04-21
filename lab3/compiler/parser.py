@@ -26,6 +26,7 @@ class Parser:
         "*": operator.mul,
         "/": operator.truediv,
         "%": operator.mod,
+        "**": operator.pow,
         "==": operator.eq,
         "!=": operator.ne,
         "<": operator.lt,
@@ -58,19 +59,16 @@ class Parser:
     def yacc(self):
         return self._yacc
 
-    def p_statement_expr(self, p):
-        """statement : expression"""
-        p[0] = p[1]
-
-    def p_statement_other(self, p):
-        """statement : conditional
+    def p_statement(self, p):
+        """statement : expression
+                     | conditional
                      | loop
                      | declaration
                      | assignment
                      | customfunc
                      | procedure
                      | print"""
-        p[0] = p[1]
+        p[0] = ast.Statement(p[1])
 
     def p_print(self, p):
         """print : PRINT '(' NAME ')' """
@@ -78,14 +76,6 @@ class Parser:
             print(self.names[p[3]])
         except LookupError:
             print("Incorrect identifier!")
-
-    def p_conditional(self, p):
-        """conditional : IF '(' expression ')' statement %prec IFX
-                       | IF '(' expression ')' statement ELSE statement """
-        if p[3]:
-            p[0] = p[5]
-        elif len(p) == 8:
-            p[0] = p[7]
 
     def p_while(self, p):
         """loop : WHILE '(' expression ')' statement %prec WHILEX """
@@ -104,6 +94,10 @@ class Parser:
     def p_arglist(self, p):
         """arglist : NAME
                    | NAME ',' arglist  """
+
+    def p_if_conditional(self, p):
+        """conditional : IF '(' expression ')' statement %prec IFX"""
+        p[0] = ast.ConditionalIf(p[3], p[5])
 
     def p_expression_prefix(self, p):
         """expression : INCR NAME

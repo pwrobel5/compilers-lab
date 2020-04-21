@@ -14,6 +14,19 @@ class TreePrinter:
     def print_tree(self, graph):
         raise Exception("printTree not defined in class " + self.__class__.__name__)
 
+    @add_to_class(ast.Statement)
+    def print_tree(self, graph):
+        graph.node(self.id, "Statement")
+        graph.edge(self.id, self._body.print_tree(graph))
+        return self.id
+
+    @add_to_class(ast.ConditionalIf)
+    def print_tree(self, graph):
+        graph.node(self.id, "If")
+        graph.edge(self.id, self._condition.print_tree(graph), "Condition")
+        graph.edge(self.id, self._statement.print_tree(graph), "Instructions")
+        return self.id
+
     @add_to_class(ast.PreFixExpression)
     def print_tree(self, graph):
         graph.node(self.id, "Prefix expression: " + self._operation)
@@ -53,6 +66,7 @@ class TreePrinter:
         graph.node(self.id, "DeclareVariable: " + self._name + ", type: " + self._value_type)
         if self._value is not None:
             graph.edge(self.id, self._value.print_tree(graph), "Assign")
+        return self.id
 
     @add_to_class(ast.BinaryOperation)
     def print_tree(self, graph):
