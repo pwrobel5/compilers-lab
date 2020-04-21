@@ -3,7 +3,9 @@ from compiler import ast
 import operator
 
 import ply.yacc as yacc
-from scipy.special import jv
+
+
+# from scipy.special import jv
 
 
 class Parser:
@@ -30,6 +32,19 @@ class Parser:
         "<=": operator.le,
         ">": operator.gt,
         ">=": operator.ge
+    }
+
+    built_in_functions = {
+        "sin": math.sin,
+        "cos": math.cos,
+        "tan": math.tan,
+        "asin": math.asin,
+        "acos": math.acos,
+        "atan": math.atan,
+        "exp": math.exp,
+        "log": math.log,
+        "sqrt": math.sqrt,
+        # "j": jv
     }
 
     # dictionary of names
@@ -93,37 +108,16 @@ class Parser:
     def p_expression_prefix(self, p):
         """expression : INCR NAME
                       | DECR NAME"""
-        try:
-            if p[1] == '++':
-                self.names[p[2]] += 1
-            elif p[1] == '--':
-                self.names[p[2]] -= 1
-
-            p[0] = self.names[p[2]]
-        except LookupError:
-            print("Incorrect identifier!")
-            p[0] = 0
+        p[0] = ast.PreFixExpression(p[2], p[1])
 
     def p_expression_postfix(self, p):
         """expression : NAME INCR
                       | NAME DECR"""
-        try:
-            p[0] = self.names[p[1]]
-            if p[2] == '++':
-                self.names[p[1]] += 1
-            elif p[2] == '--':
-                self.names[p[1]] -= 1
-        except LookupError:
-            print("Incorrect identifier!")
-            p[0] = 0
+        p[0] = ast.PostFixExpression(p[1], p[2])
 
     def p_expression_function(self, p):
         """expression : FUNCTION '(' expression ')'"""
-        p[0] = getattr(math, p[1])(p[3])
-
-    def p_expression_bessel(self, p):
-        """expression : BESSEL '(' INTEGER ',' expression ')' """
-        p[0] = jv(p[3], p[5])
+        p[0] = ast.BuiltInFunction(self.built_in_functions[p[1]], [p[3]])
 
     def p_assignment(self, p):
         """assignment : NAME ASSIGN expression"""

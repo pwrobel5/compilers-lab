@@ -14,6 +14,23 @@ class TreePrinter:
     def print_tree(self, graph):
         raise Exception("printTree not defined in class " + self.__class__.__name__)
 
+    @add_to_class(ast.PreFixExpression)
+    def print_tree(self, graph):
+        graph.node(self.id, "Prefix expression: " + self._operation)
+        return self.id
+
+    @add_to_class(ast.PostFixExpression)
+    def print_tree(self, graph):
+        graph.node(self.id, "Postfix expression: " + self._operation)
+        return self.id
+
+    @add_to_class(ast.BuiltInFunction)
+    def print_tree(self, graph):
+        graph.node(self.id, "Built-in function: " + self._function.__name__)
+        for element in self._arguments:
+            graph.edge(self.id, element.print_tree(graph), "Argument")
+        return self.id
+
     @add_to_class(ast.Assignment)
     def print_tree(self, graph):
         graph.node(self.id, "Assignment to " + self._name)

@@ -15,7 +15,7 @@ class Lexer:
     }
     tokens = ['INCR', 'DECR', 'ADD', 'SUB', 'MUL', 'DIV', 'MOD',
               'POW', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE',
-              'ASSIGN', 'TYPE', 'FUNCTION', 'BESSEL', 'NAME', 'REAL', 'INTEGER'
+              'ASSIGN', 'TYPE', 'FUNCTION', 'NAME', 'REAL', 'INTEGER'
               ] + list(reserved.values())
 
     literals = ['(', ')', ';', ',']
@@ -49,11 +49,7 @@ class Lexer:
         return t
 
     def t_FUNCTION(self, t):
-        r"""(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)"""
-        return t
-
-    def t_BESSEL(self, t):
-        r"""j (?i) (?=\d+|\(.*\))"""
+        r"""(sin|asin|cos|acos|tan|atan|exp|log|sqrt|j) (?=\d+|\(.*\)) (?i)"""
         return t
 
     def t_NAME(self, t):
