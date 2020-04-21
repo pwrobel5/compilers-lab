@@ -13,16 +13,29 @@ class Lexer:
         'end': 'END',
         'print': 'PRINT'
     }
-    tokens = ['NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'EQUALS',
-              'RELATIONAL', 'INCR', 'DECR', 'BESSEL'
+    tokens = ['INCR', 'DECR', 'ADD', 'SUB', 'MUL', 'DIV', 'MOD',
+              'POW', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE',
+              'ASSIGN', 'TYPE', 'FUNCTION', 'BESSEL', 'NAME', 'REAL', 'INTEGER'
               ] + list(reserved.values())
 
-    literals = ['=', '+', '-', '*', '/', '(', ')', ';', ',', '%']
+    literals = ['(', ')', ';', ',']
 
     # Tokens
-    t_RELATIONAL = r'(<|>|<=|>=|!=|==)'
     t_INCR = r'\+\+'
     t_DECR = r'--'
+    t_ADD = r'\+'
+    t_SUB = r'-'
+    t_MUL = r'\*'
+    t_DIV = r'/'
+    t_MOD = r'%'
+    t_POW = r'\*\*'
+    t_EQ = r'=='
+    t_NEQ = r'!='
+    t_LT = r'<'
+    t_LE = r'<='
+    t_GT = r'>'
+    t_GE = r'>='
+    t_ASSIGN = r':='
 
     def __init__(self):
         self._lexer = None
@@ -30,6 +43,10 @@ class Lexer:
     @property
     def lexer(self):
         return self._lexer
+
+    def t_TYPE(self, t):
+        r"""(int|real|boolean|string)"""
+        return t
 
     def t_FUNCTION(self, t):
         r"""(sin|asin|cos|acos|tan|atan|exp|log|sqrt) (?=\d+|\(.*\)) (?i)"""
@@ -44,21 +61,12 @@ class Lexer:
         t.type = self.reserved.get(t.value.lower(), 'NAME')
         return t
 
-    def t_EQUALS(self, t):
-        r"""="""
-        return t
-
-    def t_POWER(self, t):
-        r"""\*\*"""
-        t.value = '^'
-        return t
-
     def t_REAL(self, t):
         r"""\d+\.\d*|\.\d+"""
         t.value = float(t.value)
         return t
 
-    def t_NUMBER(self, t):
+    def t_INTEGER(self, t):
         r"""\d+"""
         t.value = int(t.value)
         return t
