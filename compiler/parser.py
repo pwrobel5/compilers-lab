@@ -46,6 +46,13 @@ class Parser:
         # "j": jv
     }
 
+    types = {
+        "int": int,
+        "real": float,
+        "boolean": bool,
+        "string": str
+    }
+
     conversions = {
         "inttostr": (int, str),
         "inttoreal": (int, float),
@@ -92,10 +99,6 @@ class Parser:
         """procedure : PROCEDURE NAME '(' arglist ')' statement END %prec PROCX
                      | PROCEDURE NAME '(' ')' statement END %prec PROCX"""
 
-    def p_arglist(self, p):
-        """arglist : NAME
-                   | NAME ',' arglist  """
-
     def p_block(self, p):
         """block : '{' statement_set '}'"""
         p[0] = ast.Block(p[2])
@@ -107,6 +110,14 @@ class Parser:
             p[0] = [p[1]]
         else:
             p[0] = [p[1]] + p[3]
+
+    def p_arglist(self, p):
+        """arglist : TYPE NAME
+                   | TYPE NAME ',' arglist"""
+        if len(p) == 3:
+            p[0] = [(self.types[p[1]], p[2])]
+        else:
+            p[0] = [(self.types[p[1]], p[2])] + p[4]
 
     def p_print(self, p):
         """print : PRINT '(' expression ')' """
@@ -169,9 +180,9 @@ class Parser:
         """declaration : TYPE NAME
                        | TYPE NAME ASSIGN expression"""
         if len(p) == 3:
-            p[0] = ast.Declaration(p[2], p[1])
+            p[0] = ast.Declaration(p[2], self.types[p[1]])
         elif len(p) == 5:
-            p[0] = ast.Declaration(p[2], p[1], p[4])
+            p[0] = ast.Declaration(p[2], self.types[p[1]], p[4])
 
     def p_expression_conversion(self, p):
         """expression : INTTOSTR '(' expression ')'

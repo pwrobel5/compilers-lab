@@ -1,3 +1,5 @@
+from compiler.errors import AssignmentError
+
 class DeclaredName:
     def __init__(self, value_type, value):
         self._type = value_type
@@ -38,12 +40,22 @@ class NamesTable:
         if name in self._table:
             raise ValueError("Variable is already declared!")
 
+        # using isinstance fails when trying to assign bool to int
+        if value_type != type(value):
+            raise AssignmentError("Value of wrong type assigned to {}. Expected {} given {}"
+                                  .format(name, value_type.__name__, type(value).__name__))
+
         declared_name = DeclaredName(value_type, value)
         self.table[name] = declared_name
 
     def assign(self, name, value):
         if name not in self._table:
             raise ValueError("Variable not defined!")
+
+        expected_type = self._table[name].type
+        if expected_type != type(value):
+            raise AssignmentError("Value of wrong type assigned to {}. Expected {} given {}"
+                                  .format(name, expected_type.__name__, type(value).__name__))
 
         self._table[name].value = value
 

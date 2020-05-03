@@ -8,3 +8,7 @@ class ConditionError(Exception):
 
 class ConversionError(Exception):
     pass
+
+
+class AssignmentError(Exception):
+    pass

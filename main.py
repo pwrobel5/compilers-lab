@@ -2,7 +2,7 @@ import argparse
 
 from graphviz import Digraph
 
-from compiler.errors import BinaryOperationError, ConditionError, ConversionError
+from compiler.errors import *
 from compiler.lexer import Lexer
 from compiler.names import NamesTable
 from compiler.parser import Parser
@@ -42,6 +42,9 @@ def run(code, ast_file_name=None):
     except ConversionError as err:
         msg, = err.args
         print("Error with conversion: " + msg)
+    except AssignmentError as err:
+        msg, = err.args
+        print("Error with assignment: " + msg)
 
 
 def interpret_file(file_name, ast_file_name):
