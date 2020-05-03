@@ -1,0 +1,8 @@
+function multiply(int x, int y) { x := x * y } return x;
+
+int x := 10;
+int y := 20;
+
+int z := multiply(x, y);
+print(z);
+print(j(x, y))

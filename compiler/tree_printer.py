@@ -48,12 +48,12 @@ class TreePrinter:
 
     @add_to_class(ast.CustomFunction)
     def print_tree(self, graph):
-        if self._returned_value:
-            graph.node(self.id, "Function {} returns {}".format(self._name, self._returned_value))
-        else:
-            graph.node(self.id, "Function {}".format(self._name))
+        graph.node(self.id, "Function {}".format(self._name))
+        graph.node(self.id, "Function {}".format(self._name))
         graph.edge(self.id, self._arg_list.print_tree(graph), "Arguments")
         graph.edge(self.id, self._body.print_tree(graph), "Body")
+        if self._returned_value:
+            graph.edge(self.id, self._returned_value.print_tree(graph), "Returns")
 
         return self.id
 
@@ -127,8 +127,7 @@ class TreePrinter:
     @add_to_class(ast.BuiltInFunction)
     def print_tree(self, graph):
         graph.node(self.id, "Built-in function: " + self._function.__name__)
-        for element in self._arguments:
-            graph.edge(self.id, element.print_tree(graph), "Argument")
+        graph.edge(self.id, self._arguments.print_tree(graph), "Argument")
         return self.id
 
     @add_to_class(ast.Assignment)
@@ -145,7 +144,7 @@ class TreePrinter:
 
     @add_to_class(ast.Declaration)
     def print_tree(self, graph):
-        graph.node(self.id, "DeclareVariable: " + self._name + ", type: " + self._value_type)
+        graph.node(self.id, "DeclareVariable: " + self._name + ", type: " + self._value_type.__name__)
         if self._value is not None:
             graph.edge(self.id, self._value.print_tree(graph), "Assign")
         return self.id
