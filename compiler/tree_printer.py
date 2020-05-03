@@ -101,6 +101,19 @@ class TreePrinter:
         graph.edge(self.id, self._statement.print_tree(graph), "Instructions")
         return self.id
 
+    @add_to_class(ast.CallArgumentList)
+    def print_tree(self, graph):
+        graph.node(self.id, "Call arguments")
+        for argument in self._arguments:
+            graph.edge(self.id, argument.print_tree(graph))
+        return self.id
+
+    @add_to_class(ast.Call)
+    def print_tree(self, graph):
+        graph.node(self.id, "Call {}".format(self._function_name))
+        graph.edge(self.id, self._arg_list.print_tree(graph))
+        return self.id
+
     @add_to_class(ast.PreFixExpression)
     def print_tree(self, graph):
         graph.node(self.id, "Prefix expression: " + self._operation)

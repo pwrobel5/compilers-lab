@@ -46,7 +46,10 @@ class FunctionArgumentList(Node):
         self._arguments = arguments
 
     def execute(self, scope):
-        pass
+        result = []
+        for argument in self._arguments:
+            result += [argument.execute(scope)]
+        return result
 
     def append_argument(self, argument):
         self._arguments.append(argument)
@@ -58,7 +61,7 @@ class FunctionArgument(Node):
         self._type = arg_type
 
     def execute(self, scope):
-        pass
+        return self._name, self._type
 
 
 class CustomFunction(Node):
@@ -173,6 +176,57 @@ class ConditionalIf(Node):
             scope.end_current()
 
 
+class CallArgumentList(Node):
+    def __init__(self, arguments):
+        self._arguments = arguments
+
+    def execute(self, scope):
+        result = []
+        for argument in self._arguments:
+            result.append(argument.execute(scope))
+        return result
+
+    def append_argument(self, argument):
+        self._arguments.append(argument)
+
+
+class Call(Node):
+    def __init__(self, function_name, arg_list):
+        self._function_name = function_name
+        self._arg_list = arg_list
+
+    def execute(self, scope):
+        function = scope.read_function(self._function_name)
+        call_arguments = self._arg_list.execute(scope)
+        function_arguments = function.arg_list.execute(scope)
+
+        if len(call_arguments) != len(function_arguments):
+            raise ValueError("Difference in number of arguments for call, expected: {} given: {}"
+                             .format(len(function_arguments), len(call_arguments)))
+
+        scope.start_new()
+        for i in range(0, len(call_arguments)):
+            function_argument = function_arguments[i]
+            expected_type = function_argument[1]
+            argument_name = function_argument[0]
+            call_argument = call_arguments[i]
+
+            # make type conversion if necessary
+            if expected_type != type(call_argument):
+                call_argument = expected_type(call_argument)
+
+            scope.declare_name(argument_name, expected_type, call_argument)
+
+        function.body.execute(scope)
+        result = None
+
+        if function.returned_value:
+            result = function.returned_value.execute(scope)
+
+        scope.end_current()
+        return result
+
+
 class PreFixExpression(Node):
     def __init__(self, name, operation):
         self._name = name
@@ -212,7 +266,8 @@ class BuiltInFunction(Node):
         self._arguments = arguments
 
     def execute(self, scope):
-        return self._function(*map(lambda arg: arg.execute(scope), self._arguments))
+        executed_arguments = self._arguments.execute(scope)
+        return self._function(*executed_arguments)
 
 
 class Assignment(Node):

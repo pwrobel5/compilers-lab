@@ -12,7 +12,6 @@ class Lexer:
         'function': 'CUSTOMFUNC',
         'procedure': 'PROCEDURE',
         'return': 'RETURN',
-        'end': 'END',
         'print': 'PRINT',
         'inttostr': 'INTTOSTR',
         'inttoreal': 'INTTOREAL',

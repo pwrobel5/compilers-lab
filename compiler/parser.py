@@ -4,12 +4,12 @@ import operator
 import ply.yacc as yacc
 
 from compiler import ast
+from scipy.special import jv
 
 
 class Parser:
     precedence = (
-        ('nonassoc', 'IFX', 'PROCX'),
-        ('nonassoc', 'ELSE'),
+        ('nonassoc', 'IFX'),  # to avoid shift/reduce conflicts with conditionals
         ('left', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE'),
         ('left', 'ADD', 'SUB'),
         ('left', 'MUL', 'DIV', 'MOD'),
@@ -43,7 +43,7 @@ class Parser:
         "exp": math.exp,
         "log": math.log,
         "sqrt": math.sqrt,
-        # "j": jv
+        "j": jv
     }
 
     types = {
@@ -91,10 +91,6 @@ class Parser:
                      | print"""
         p[0] = ast.Statement(p[1])
 
-    def p_procedure(self, p):
-        """procedure : PROCEDURE NAME '(' arglist ')' statement END %prec PROCX
-                     | PROCEDURE NAME '(' ')' statement END %prec PROCX"""
-
     def p_block(self, p):
         """block : '{' statement_set '}'"""
         p[0] = ast.Block(p[2])
@@ -109,9 +105,12 @@ class Parser:
 
     def p_arglist(self, p):
         """arglist : func_arg
-                   | func_arg ',' arglist"""
+                   | func_arg ',' arglist
+                   |"""
         if len(p) == 2:
             p[0] = ast.FunctionArgumentList([p[1]])
+        elif len(p) == 1:
+            p[0] = ast.FunctionArgumentList([])
         else:
             p[3].append_argument(p[1])
             p[0] = p[3]
@@ -120,13 +119,13 @@ class Parser:
         """func_arg : TYPE NAME"""
         p[0] = ast.FunctionArgument(self.types[p[1]], p[2])
 
+    def p_procedure(self, p):
+        """procedure : PROCEDURE NAME '(' arglist ')' block"""
+        p[0] = ast.CustomFunction(p[2], p[4], p[6])
+
     def p_customfunc(self, p):
-        """customfunc : CUSTOMFUNC NAME '(' arglist ')' block RETURN NAME
-                      | CUSTOMFUNC NAME '(' ')' block RETURN NAME"""
-        if len(p) == 9:
-            p[0] = ast.CustomFunction(p[2], p[4], p[6], p[8])
-        else:
-            p[0] = ast.CustomFunction(p[2], ast.FunctionArgumentList([]), p[5], p[7])
+        """customfunc : CUSTOMFUNC NAME '(' arglist ')' block RETURN expression"""
+        p[0] = ast.CustomFunction(p[2], p[4], p[6], p[8])
 
     def p_print(self, p):
         """print : PRINT '(' expression ')' """
@@ -159,6 +158,22 @@ class Parser:
                        | IF '(' expression ')' block %prec IFX"""
         p[0] = ast.ConditionalIf(p[3], p[5])
 
+    def p_call_args(self, p):
+        """call_args : expression
+                     | expression ',' call_args
+                     |"""
+        if len(p) == 1:
+            p[0] = ast.CallArgumentList([])
+        elif len(p) == 2:
+            p[0] = ast.CallArgumentList([p[1]])
+        else:
+            p[3].append_argument(p[1])
+            p[0] = p[3]
+
+    def p_expression_call(self, p):
+        """expression : NAME '(' call_args ')'"""
+        p[0] = ast.Call(p[1], p[3])
+
     def p_expression_prefix(self, p):
         """expression : INCR NAME
                       | DECR NAME"""
@@ -170,8 +185,8 @@ class Parser:
         p[0] = ast.PostFixExpression(p[1], p[2])
 
     def p_expression_function(self, p):
-        """expression : FUNCTION '(' expression ')'"""
-        p[0] = ast.BuiltInFunction(self.built_in_functions[p[1]], [p[3]])
+        """expression : FUNCTION '(' call_args ')'"""
+        p[0] = ast.BuiltInFunction(self.built_in_functions[p[1]], p[3])
 
     def p_assignment(self, p):
         """assignment : NAME ASSIGN expression"""
