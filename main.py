@@ -4,7 +4,7 @@ from graphviz import Digraph
 
 from compiler.errors import *
 from compiler.lexer import Lexer
-from compiler.names import NamesTable
+from compiler.names import Scope
 from compiler.parser import Parser
 import compiler.tree_printer
 
@@ -12,7 +12,7 @@ lexer = Lexer()
 lexer.build()
 parser = Parser(lexer.tokens)
 parser.build()
-names = NamesTable()
+scope = Scope()
 
 
 def print_tokens(code):
@@ -26,7 +26,7 @@ def print_tokens(code):
 def run(code, ast_file_name=None):
     res = parser.parse(lexer, code)
     try:
-        res.execute(names)
+        res.execute(scope)
 
         if ast_file_name:
             graph = Digraph(format="png")
@@ -35,16 +35,19 @@ def run(code, ast_file_name=None):
 
     except BinaryOperationError as err:
         msg, = err.args
-        print("Error with binary operation: " + msg)
+        print("Error with binary operation: {}".format(msg))
     except ConditionError as err:
         msg, = err.args
-        print("Error with given condition: " + msg)
+        print("Error with given condition: {}".format(msg))
     except ConversionError as err:
         msg, = err.args
-        print("Error with conversion: " + msg)
+        print("Error with conversion: {}".format(msg))
     except AssignmentError as err:
         msg, = err.args
-        print("Error with assignment: " + msg)
+        print("Error with assignment: {}".format(msg))
+    except ValueError as err:
+        msg, = err.args
+        print("Value Error: {}".format(msg))
 
 
 def interpret_file(file_name, ast_file_name):

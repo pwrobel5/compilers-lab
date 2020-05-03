@@ -34,6 +34,29 @@ class TreePrinter:
             graph.edge(self.id, statement.print_tree(graph))
         return self.id
 
+    @add_to_class(ast.FunctionArgumentList)
+    def print_tree(self, graph):
+        graph.node(self.id, "Arguments list")
+        for argument in self._arguments:
+            graph.edge(self.id, argument.print_tree(graph))
+        return self.id
+
+    @add_to_class(ast.FunctionArgument)
+    def print_tree(self, graph):
+        graph.node(self.id, "Argument: {}: {}".format(self._name, self._type.__name__))
+        return self.id
+
+    @add_to_class(ast.CustomFunction)
+    def print_tree(self, graph):
+        if self._returned_value:
+            graph.node(self.id, "Function {} returns {}".format(self._name, self._returned_value))
+        else:
+            graph.node(self.id, "Function {}".format(self._name))
+        graph.edge(self.id, self._arg_list.print_tree(graph), "Arguments")
+        graph.edge(self.id, self._body.print_tree(graph), "Body")
+
+        return self.id
+
     @add_to_class(ast.Print)
     def print_tree(self, graph):
         graph.node(self.id, "Print")

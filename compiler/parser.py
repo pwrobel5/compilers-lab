@@ -8,7 +8,7 @@ from compiler import ast
 
 class Parser:
     precedence = (
-        ('nonassoc', 'IFX', 'CUSTOMFUNCX', 'PROCX'),
+        ('nonassoc', 'IFX', 'PROCX'),
         ('nonassoc', 'ELSE'),
         ('left', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE'),
         ('left', 'ADD', 'SUB'),
@@ -91,10 +91,6 @@ class Parser:
                      | print"""
         p[0] = ast.Statement(p[1])
 
-    def p_customfunc(self, p):
-        """customfunc : CUSTOMFUNC NAME '(' arglist ')' statement RETURN NAME %prec CUSTOMFUNCX
-                      | CUSTOMFUNC NAME '(' ')' statement RETURN NAME %prec CUSTOMFUNCX"""
-
     def p_procedure(self, p):
         """procedure : PROCEDURE NAME '(' arglist ')' statement END %prec PROCX
                      | PROCEDURE NAME '(' ')' statement END %prec PROCX"""
@@ -112,12 +108,25 @@ class Parser:
             p[0] = [p[1]] + p[3]
 
     def p_arglist(self, p):
-        """arglist : TYPE NAME
-                   | TYPE NAME ',' arglist"""
-        if len(p) == 3:
-            p[0] = [(self.types[p[1]], p[2])]
+        """arglist : func_arg
+                   | func_arg ',' arglist"""
+        if len(p) == 2:
+            p[0] = ast.FunctionArgumentList([p[1]])
         else:
-            p[0] = [(self.types[p[1]], p[2])] + p[4]
+            p[3].append_argument(p[1])
+            p[0] = p[3]
+
+    def p_func_arg(self, p):
+        """func_arg : TYPE NAME"""
+        p[0] = ast.FunctionArgument(self.types[p[1]], p[2])
+
+    def p_customfunc(self, p):
+        """customfunc : CUSTOMFUNC NAME '(' arglist ')' block RETURN NAME
+                      | CUSTOMFUNC NAME '(' ')' block RETURN NAME"""
+        if len(p) == 9:
+            p[0] = ast.CustomFunction(p[2], p[4], p[6], p[8])
+        else:
+            p[0] = ast.CustomFunction(p[2], ast.FunctionArgumentList([]), p[5], p[7])
 
     def p_print(self, p):
         """print : PRINT '(' expression ')' """
