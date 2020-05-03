@@ -14,10 +14,48 @@ class TreePrinter:
     def print_tree(self, graph):
         raise Exception("printTree not defined in class " + self.__class__.__name__)
 
+    @add_to_class(ast.Block)
+    def print_tree(self, graph):
+        graph.node(self.id, "Block")
+        for statement in self._statement_list:
+            graph.edge(self.id, statement.print_tree(graph))
+        return self.id
+
     @add_to_class(ast.Statement)
     def print_tree(self, graph):
         graph.node(self.id, "Statement")
         graph.edge(self.id, self._body.print_tree(graph))
+        return self.id
+
+    @add_to_class(ast.RepeatUntil)
+    def print_tree(self, graph):
+        graph.node(self.id, "Repeat")
+        graph.edge(self.id, self._block.print_tree(graph), "Block")
+        graph.edge(self.id, self._condition.print_tree(graph), "Until")
+        return self.id
+
+    @add_to_class(ast.For)
+    def print_tree(self, graph):
+        graph.node(self.id, "For")
+        graph.edge(self.id, self._initial_assignment.print_tree(graph), "Initial")
+        graph.edge(self.id, self._condition.print_tree(graph), "Condition")
+        graph.edge(self.id, self._step_assignment.print_tree(graph), "Step")
+        graph.edge(self.id, self._block.print_tree(graph), "Block")
+        return self.id
+
+    @add_to_class(ast.While)
+    def print_tree(self, graph):
+        graph.node(self.id, "While")
+        graph.edge(self.id, self._condition.print_tree(graph), "Condition")
+        graph.edge(self.id, self._block.print_tree(graph), "Block")
+        return self.id
+
+    @add_to_class(ast.ConditionalIfElse)
+    def print_tree(self, graph):
+        graph.node(self.id, "IfElse")
+        graph.edge(self.id, self._condition.print_tree(graph), "Condition")
+        graph.edge(self.id, self._block_if.print_tree(graph), "If")
+        graph.edge(self.id, self._block_else.print_tree(graph), "Else")
         return self.id
 
     @add_to_class(ast.ConditionalIf)
@@ -56,11 +94,6 @@ class TreePrinter:
         graph.edge(self.id, self._value.print_tree(graph))
         return self.id
 
-    @add_to_class(ast.Name)
-    def print_tree(self, graph):
-        graph.node(self.id, "VariableName: " + self._name)
-        return self.id
-
     @add_to_class(ast.Declaration)
     def print_tree(self, graph):
         graph.node(self.id, "DeclareVariable: " + self._name + ", type: " + self._value_type)
@@ -83,4 +116,19 @@ class TreePrinter:
     @add_to_class(ast.Integer)
     def print_tree(self, graph):
         graph.node(self.id, "Integer: " + str(self._value))
+        return self.id
+
+    @add_to_class(ast.Boolean)
+    def print_tree(self, graph):
+        graph.node(self.id, "Boolean: " + str(self._value))
+        return self.id
+
+    @add_to_class(ast.String)
+    def print_tree(self, graph):
+        graph.node(self.id, "String: " + self._value)
+        return self.id
+
+    @add_to_class(ast.Name)
+    def print_tree(self, graph):
+        graph.node(self.id, "VariableName: " + self._name)
         return self.id

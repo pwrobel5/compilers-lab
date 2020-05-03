@@ -10,7 +10,7 @@ import ply.yacc as yacc
 
 class Parser:
     precedence = (
-        ('nonassoc', 'IFX', 'WHILEX', 'FORX', 'CUSTOMFUNCX', 'PROCX'),
+        ('nonassoc', 'IFX', 'CUSTOMFUNCX', 'PROCX'),
         ('nonassoc', 'ELSE'),
         ('left', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE'),
         ('left', 'ADD', 'SUB'),
@@ -77,12 +77,6 @@ class Parser:
         except LookupError:
             print("Incorrect identifier!")
 
-    def p_while(self, p):
-        """loop : WHILE '(' expression ')' statement %prec WHILEX """
-
-    def p_for(self, p):
-        """loop : FOR '(' assignment ';' expression ';' assignment ')' statement %prec FORX"""
-
     def p_customfunc(self, p):
         """customfunc : CUSTOMFUNC NAME '(' arglist ')' statement RETURN NAME %prec CUSTOMFUNCX
                       | CUSTOMFUNC NAME '(' ')' statement RETURN NAME %prec CUSTOMFUNCX"""
@@ -95,8 +89,43 @@ class Parser:
         """arglist : NAME
                    | NAME ',' arglist  """
 
+    def p_block(self, p):
+        """block : '{' statement_set '}'"""
+        p[0] = ast.Block(p[2])
+
+    def p_statement_set(self, p):
+        """statement_set : statement ';' statement_set
+                         | statement"""
+        if len(p) == 2:
+            p[0] = [p[1]]
+        else:
+            p[0] = [p[1]] + p[3]
+
+    def p_repeat_until(self, p):
+        """loop : REPEAT statement UNTIL '(' expression ')'
+                | REPEAT block UNTIL '(' expression ')'"""
+        p[0] = ast.RepeatUntil(p[2], p[5])
+
+    def p_for(self, p):
+        """loop : FOR '(' assignment ';' expression ';' assignment ')' statement
+                | FOR '(' assignment ';' expression ';' assignment ')' block"""
+        p[0] = ast.For(p[3], p[5], p[7], p[9])
+
+    def p_while(self, p):
+        """loop : WHILE '(' expression ')' statement
+                | WHILE '(' expression ')' block"""
+        p[0] = ast.While(p[3], p[5])
+
+    def p_if_else_conditional(self, p):
+        """conditional : IF '(' expression ')' statement ELSE statement
+                       | IF '(' expression ')' block ELSE statement
+                       | IF '(' expression ')' statement ELSE block
+                       | IF '(' expression ')' block ELSE block"""
+        p[0] = ast.ConditionalIfElse(p[3], p[5], p[7])
+
     def p_if_conditional(self, p):
-        """conditional : IF '(' expression ')' statement %prec IFX"""
+        """conditional : IF '(' expression ')' statement %prec IFX
+                       | IF '(' expression ')' block %prec IFX"""
         p[0] = ast.ConditionalIf(p[3], p[5])
 
     def p_expression_prefix(self, p):
@@ -124,10 +153,6 @@ class Parser:
     def p_expression_group(self, p):
         """expression : '(' expression ')'"""
         p[0] = p[2]
-
-    def p_expression_name(self, p):
-        """expression : NAME"""
-        p[0] = ast.Name(p[1])
 
     def p_declaration(self, p):
         """declaration : TYPE NAME
@@ -161,6 +186,18 @@ class Parser:
     def p_expression_integer(self, p):
         """expression : INTEGER"""
         p[0] = ast.Integer(p[1])
+
+    def p_expression_boolean(self, p):
+        """expression : BOOLEAN"""
+        p[0] = ast.Boolean(p[1])
+
+    def p_expression_string(self, p):
+        """expression : STRING"""
+        p[0] = ast.String(p[1])
+
+    def p_expression_name(self, p):
+        """expression : NAME"""
+        p[0] = ast.Name(p[1])
 
     def p_error(self, p):
         if p:

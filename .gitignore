@@ -1,5 +1,8 @@
-*/parser.out
-*/parsetab.py
-*/__pycache__/*
-*/venv/*
-*/.idea/
+parser.out
+parsetab.py
+__pycache__/
+venv/
+.idea/
+ast
+ast.png
+

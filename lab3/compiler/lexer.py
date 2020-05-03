@@ -7,6 +7,8 @@ class Lexer:
         'else': 'ELSE',
         'while': 'WHILE',
         'for': 'FOR',
+        'repeat': 'REPEAT',
+        'until': 'UNTIL',
         'function': 'CUSTOMFUNC',
         'procedure': 'PROCEDURE',
         'return': 'RETURN',
@@ -15,10 +17,11 @@ class Lexer:
     }
     tokens = ['INCR', 'DECR', 'ADD', 'SUB', 'MUL', 'DIV', 'MOD',
               'POW', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE',
-              'ASSIGN', 'TYPE', 'FUNCTION', 'NAME', 'REAL', 'INTEGER'
+              'ASSIGN', 'TYPE', 'FUNCTION', 'NAME', 'REAL', 'INTEGER',
+              'BOOLEAN', 'STRING'
               ] + list(reserved.values())
 
-    literals = ['(', ')', ';', ',']
+    literals = ['(', ')', ';', ',', '{', '}']
 
     # Tokens
     t_INCR = r'\+\+'
@@ -52,11 +55,6 @@ class Lexer:
         r"""(sin|asin|cos|acos|tan|atan|exp|log|sqrt|j) (?=\d+|\(.*\)) (?i)"""
         return t
 
-    def t_NAME(self, t):
-        r"""[a-zA-Z_][a-zA-Z0-9_]*"""
-        t.type = self.reserved.get(t.value.lower(), 'NAME')
-        return t
-
     def t_REAL(self, t):
         r"""\d+\.\d*|\.\d+"""
         t.value = float(t.value)
@@ -65,6 +63,21 @@ class Lexer:
     def t_INTEGER(self, t):
         r"""\d+"""
         t.value = int(t.value)
+        return t
+
+    def t_BOOLEAN(self, t):
+        r"""true|false"""
+        t.value = bool(t.value)
+        return t
+
+    def t_STRING(self, t):
+        r"""'.+'|\".+\""""
+        t.value = str(t.value)
+        return t
+
+    def t_NAME(self, t):
+        r"""[a-zA-Z_][a-zA-Z0-9_]*"""
+        t.type = self.reserved.get(t.value.lower(), 'NAME')
         return t
 
     t_ignore = " \t"

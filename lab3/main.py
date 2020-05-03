@@ -28,14 +28,13 @@ def main():
         print(res.execute(names))
         res.print_tree(graph)
         graph.render('ast')
-        '''
-        lexer.lexer.input(s)
+
+        """lexer.lexer.input(s)
         while True:
             tok = lexer.lexer.token()
             if not tok:
                 break
-            print(tok)
-        '''
+            print(tok)"""
 
 
 if __name__ == '__main__':

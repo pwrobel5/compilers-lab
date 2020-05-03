@@ -1,10 +1,29 @@
 import compiler.names
+import abc
 
 
 class Node(object):
+    __metaclass__ = abc.ABCMeta
+
     @property
     def id(self):
         return str(hash(self))
+
+    @abc.abstractmethod
+    def execute(self, names):
+        pass
+
+
+class Block(Node):
+    def __init__(self, statement_list):
+        self._statement_list = statement_list
+
+    def execute(self, names):
+        result = None
+        for statement in self._statement_list:
+            result = statement.execute(names)
+
+        return result
 
 
 class Statement(Node):
@@ -13,6 +32,54 @@ class Statement(Node):
 
     def execute(self, names):
         return self._body.execute(names)
+
+
+class RepeatUntil(Node):
+    def __init__(self, block, condition):
+        self._block = block
+        self._condition = condition
+
+    def execute(self, names):
+        self._block.execute(names)
+        while not self._condition.execute(names):
+            self._block.execute(names)
+
+
+class For(Node):
+    def __init__(self, initial_assignment, condition, step_assignment, block):
+        self._initial_assignment = initial_assignment
+        self._condition = condition
+        self._step_assignment = step_assignment
+        self._block = block
+
+    def execute(self, names):
+        self._initial_assignment.execute(names)
+        while self._condition.execute(names):
+            self._block.execute(names)
+            self._step_assignment.execute(names)
+
+
+class While(Node):
+    def __init__(self, condition, block):
+        self._condition = condition
+        self._block = block
+
+    def execute(self, names):
+        while self._condition.execute(names):
+            self._block.execute(names)
+
+
+class ConditionalIfElse(Node):
+    def __init__(self, condition, block_if, block_else):
+        self._condition = condition
+        self._block_if = block_if
+        self._block_else = block_else
+
+    def execute(self, names):
+        if self._condition.execute(names):
+            self._block_if.execute(names)
+        else:
+            self._block_else.execute(names)
 
 
 class ConditionalIf(Node):
@@ -84,14 +151,6 @@ class Minus(Node):
         return (-1) * self._value.execute(names)
 
 
-class Name(Node):
-    def __init__(self, name):
-        self._name = name
-
-    def execute(self, names):
-        return names.read(self._name)
-
-
 class Declaration(Node):
     def __init__(self, name, value_type, value=None):
         self._name = name
@@ -129,3 +188,27 @@ class Integer(Node):
 
     def execute(self, names):
         return self._value
+
+
+class Boolean(Node):
+    def __init__(self, value):
+        self._value = value
+
+    def execute(self, names):
+        return self._value
+
+
+class String(Node):
+    def __init__(self, value):
+        self._value = value
+
+    def execute(self, names):
+        return self._value
+
+
+class Name(Node):
+    def __init__(self, name):
+        self._name = name
+
+    def execute(self, names):
+        return names.read(self._name)
