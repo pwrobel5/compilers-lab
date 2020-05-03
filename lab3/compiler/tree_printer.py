@@ -14,9 +14,9 @@ class TreePrinter:
     def print_tree(self, graph):
         raise Exception("printTree not defined in class " + self.__class__.__name__)
 
-    @add_to_class(ast.Block)
+    @add_to_class(ast.Program)
     def print_tree(self, graph):
-        graph.node(self.id, "Block")
+        graph.node(self.id, "Program")
         for statement in self._statement_list:
             graph.edge(self.id, statement.print_tree(graph))
         return self.id
@@ -25,6 +25,19 @@ class TreePrinter:
     def print_tree(self, graph):
         graph.node(self.id, "Statement")
         graph.edge(self.id, self._body.print_tree(graph))
+        return self.id
+
+    @add_to_class(ast.Block)
+    def print_tree(self, graph):
+        graph.node(self.id, "Block")
+        for statement in self._statement_list:
+            graph.edge(self.id, statement.print_tree(graph))
+        return self.id
+
+    @add_to_class(ast.Print)
+    def print_tree(self, graph):
+        graph.node(self.id, "Print")
+        graph.edge(self.id, self._expression.print_tree(graph), "Expression")
         return self.id
 
     @add_to_class(ast.RepeatUntil)
@@ -99,6 +112,12 @@ class TreePrinter:
         graph.node(self.id, "DeclareVariable: " + self._name + ", type: " + self._value_type)
         if self._value is not None:
             graph.edge(self.id, self._value.print_tree(graph), "Assign")
+        return self.id
+
+    @add_to_class(ast.Conversion)
+    def print_tree(self, graph):
+        graph.node(self.id, "Conversion from {} to {}".format(self._type_from.__name__, self._operation.__name__))
+        graph.edge(self.id, self._value.print_tree(graph), "Value")
         return self.id
 
     @add_to_class(ast.BinaryOperation)

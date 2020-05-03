@@ -1,11 +1,9 @@
 import math
-from compiler import ast
 import operator
 
 import ply.yacc as yacc
 
-
-# from scipy.special import jv
+from compiler import ast
 
 
 class Parser:
@@ -48,8 +46,20 @@ class Parser:
         # "j": jv
     }
 
-    # dictionary of names
-    names = {}
+    conversions = {
+        "inttostr": (int, str),
+        "inttoreal": (int, float),
+        "inttoboolean": (int, bool),
+        "realtostr": (float, str),
+        "realtoint": (float, int),
+        "realtoboolean": (float, bool),
+        "booleantostr": (bool, str),
+        "booleantoint": (bool, int),
+        "booleantoreal": (bool, float),
+        "strtoint": (str, int),
+        "strtoreal": (str, float),
+        "strtoboolean": (str, bool)
+    }
 
     def __init__(self, tokens):
         self._yacc = None
@@ -58,6 +68,10 @@ class Parser:
     @property
     def yacc(self):
         return self._yacc
+
+    def p_program(self, p):
+        """program : statement_set"""
+        p[0] = ast.Program(p[1])
 
     def p_statement(self, p):
         """statement : expression
@@ -69,13 +83,6 @@ class Parser:
                      | procedure
                      | print"""
         p[0] = ast.Statement(p[1])
-
-    def p_print(self, p):
-        """print : PRINT '(' NAME ')' """
-        try:
-            print(self.names[p[3]])
-        except LookupError:
-            print("Incorrect identifier!")
 
     def p_customfunc(self, p):
         """customfunc : CUSTOMFUNC NAME '(' arglist ')' statement RETURN NAME %prec CUSTOMFUNCX
@@ -100,6 +107,10 @@ class Parser:
             p[0] = [p[1]]
         else:
             p[0] = [p[1]] + p[3]
+
+    def p_print(self, p):
+        """print : PRINT '(' expression ')' """
+        p[0] = ast.Print(p[3])
 
     def p_repeat_until(self, p):
         """loop : REPEAT statement UNTIL '(' expression ')'
@@ -161,6 +172,22 @@ class Parser:
             p[0] = ast.Declaration(p[2], p[1])
         elif len(p) == 5:
             p[0] = ast.Declaration(p[2], p[1], p[4])
+
+    def p_expression_conversion(self, p):
+        """expression : INTTOSTR '(' expression ')'
+                      | INTTOREAL '(' expression ')'
+                      | INTTOBOOLEAN '(' expression ')'
+                      | REALTOSTR '(' expression ')'
+                      | REALTOINT '(' expression ')'
+                      | REALTOBOOLEAN '(' expression ')'
+                      | BOOLEANTOSTR '(' expression ')'
+                      | BOOLEANTOINT '(' expression ')'
+                      | BOOLEANTOREAL '(' expression ')'
+                      | STRTOINT '(' expression ')'
+                      | STRTOREAL '(' expression ')'
+                      | STRTOBOOLEAN '(' expression ')'"""
+        conversion = self.conversions[p[1]]
+        p[0] = ast.Conversion(conversion[0], conversion[1], p[3])
 
     def p_expression_binop(self, p):
         """expression : expression ADD expression

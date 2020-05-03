@@ -13,7 +13,19 @@ class Lexer:
         'procedure': 'PROCEDURE',
         'return': 'RETURN',
         'end': 'END',
-        'print': 'PRINT'
+        'print': 'PRINT',
+        'inttostr': 'INTTOSTR',
+        'inttoreal': 'INTTOREAL',
+        'inttoboolean': 'INTTOBOOLEAN',
+        'realtostr': 'REALTOSTR',
+        'realtoint': 'REALTOINT',
+        'realtoboolean': 'REALTOBOOLEAN',
+        'booleantostr': 'BOOLEANTOSTR',
+        'booleantoint': 'BOOLEANTOINT',
+        'booleantoreal': 'BOOLEANTOREAL',
+        'strtoint': 'STRTOINT',
+        'strtoreal': 'STRTOREAL',
+        'strtoboolean': 'STRTOBOOLEAN'
     }
     tokens = ['INCR', 'DECR', 'ADD', 'SUB', 'MUL', 'DIV', 'MOD',
               'POW', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE',
@@ -48,7 +60,7 @@ class Lexer:
         return self._lexer
 
     def t_TYPE(self, t):
-        r"""(int|real|boolean|string)"""
+        r"""\b(int|real|boolean|string)\b"""
         return t
 
     def t_FUNCTION(self, t):
@@ -67,12 +79,16 @@ class Lexer:
 
     def t_BOOLEAN(self, t):
         r"""true|false"""
-        t.value = bool(t.value)
+        t.value = t.value.lower()
+        if t.value == "true":
+            t.value = True
+        elif t.value == "false":
+            t.value = False
         return t
 
     def t_STRING(self, t):
-        r"""'.+'|\".+\""""
-        t.value = str(t.value)
+        r"""'[^\']*'|\"[^\"]*\""""
+        t.value = t.value[1:-1]
         return t
 
     def t_NAME(self, t):

@@ -1,5 +1,6 @@
-import compiler.names
 import abc
+
+from compiler.errors import *
 
 
 class Node(object):
@@ -14,16 +15,13 @@ class Node(object):
         pass
 
 
-class Block(Node):
+class Program(Node):
     def __init__(self, statement_list):
         self._statement_list = statement_list
 
     def execute(self, names):
-        result = None
         for statement in self._statement_list:
-            result = statement.execute(names)
-
-        return result
+            statement.execute(names)
 
 
 class Statement(Node):
@@ -34,6 +32,23 @@ class Statement(Node):
         return self._body.execute(names)
 
 
+class Block(Node):
+    def __init__(self, statement_list):
+        self._statement_list = statement_list
+
+    def execute(self, names):
+        for statement in self._statement_list:
+            statement.execute(names)
+
+
+class Print(Node):
+    def __init__(self, expression):
+        self._expression = expression
+
+    def execute(self, names):
+        print(self._expression.execute(names))
+
+
 class RepeatUntil(Node):
     def __init__(self, block, condition):
         self._block = block
@@ -41,8 +56,14 @@ class RepeatUntil(Node):
 
     def execute(self, names):
         self._block.execute(names)
-        while not self._condition.execute(names):
+
+        condition = self._condition.execute(names)
+        if not isinstance(condition, bool):
+            raise ConditionError("Given repeat-until condition is not bool")
+
+        while not condition:
             self._block.execute(names)
+            condition = self._condition.execute(names)
 
 
 class For(Node):
@@ -54,9 +75,15 @@ class For(Node):
 
     def execute(self, names):
         self._initial_assignment.execute(names)
-        while self._condition.execute(names):
+
+        condition = self._condition.execute(names)
+        if not isinstance(condition, bool):
+            raise ConditionError("Given for condition is not bool")
+
+        while condition:
             self._block.execute(names)
             self._step_assignment.execute(names)
+            condition = self._condition.execute(names)
 
 
 class While(Node):
@@ -65,8 +92,13 @@ class While(Node):
         self._block = block
 
     def execute(self, names):
-        while self._condition.execute(names):
+        condition = self._condition.execute(names)
+        if not isinstance(condition, bool):
+            raise ConditionError("Given while condition is not bool")
+
+        while condition:
             self._block.execute(names)
+            condition = self._condition.execute(names)
 
 
 class ConditionalIfElse(Node):
@@ -76,7 +108,11 @@ class ConditionalIfElse(Node):
         self._block_else = block_else
 
     def execute(self, names):
-        if self._condition.execute(names):
+        condition = self._condition.execute(names)
+        if not isinstance(condition, bool):
+            raise ConditionError("Given if-else condition is not bool")
+
+        if condition:
             self._block_if.execute(names)
         else:
             self._block_else.execute(names)
@@ -88,7 +124,11 @@ class ConditionalIf(Node):
         self._statement = statement
 
     def execute(self, names):
-        if self._condition.execute(names):
+        condition = self._condition.execute(names)
+        if not isinstance(condition, bool):
+            raise ConditionError("Given if condition is not bool")
+
+        if condition:
             self._statement.execute(names)
 
 
@@ -164,6 +204,22 @@ class Declaration(Node):
             names.declare(self._name, self._value_type, None)
 
 
+class Conversion(Node):
+    def __init__(self, type_from, operation, value):
+        self._type_from = type_from
+        self._operation = operation
+        self._value = value
+
+    def execute(self, names):
+        value = self._value.execute(names)
+
+        if not isinstance(value, self._type_from):
+            raise ConversionError("Converted value is in incorrect type, expected {} given {}"
+                                  .format(self._type_from.__name__, type(value).__name__))
+
+        return self._operation(value)
+
+
 class BinaryOperation(Node):
     def __init__(self, left, operation, right):
         self._left = left
@@ -171,7 +227,14 @@ class BinaryOperation(Node):
         self._right = right
 
     def execute(self, names):
-        return self._operation(self._left.execute(names), self._right.execute(names))
+        left = self._left.execute(names)
+        right = self._right.execute(names)
+
+        if type(left) == type(right):
+            return self._operation(self._left.execute(names), self._right.execute(names))
+        else:
+            raise BinaryOperationError("Types of arguments do not match! Left is {} while right is {}"
+                                       .format(type(left).__name__, type(right).__name__))
 
 
 class Real(Node):
