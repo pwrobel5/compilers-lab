@@ -2,9 +2,9 @@ import math
 import operator
 
 import ply.yacc as yacc
+from scipy.special import jv
 
 from compiler import ast
-from scipy.special import jv
 
 
 class Parser:
@@ -97,8 +97,8 @@ class Parser:
 
     def p_statement_set(self, p):
         """statement_set : statement ';' statement_set
-                         | statement"""
-        if len(p) == 2:
+                         | statement ';'"""
+        if len(p) == 3:
             p[0] = [p[1]]
         else:
             p[0] = [p[1]] + p[3]

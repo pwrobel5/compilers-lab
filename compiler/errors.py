@@ -12,3 +12,7 @@ class ConversionError(Exception):
 
 class AssignmentError(Exception):
     pass
+
+
+class ExpressionResultSavingError(Exception):
+    pass

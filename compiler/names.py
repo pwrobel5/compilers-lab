@@ -1,10 +1,11 @@
-from compiler.errors import AssignmentError
+from compiler.errors import AssignmentError, ExpressionResultSavingError
 
 
 class DeclaredName:
     def __init__(self, value_type, value):
         self._type = value_type
         self._value = value
+        self._changes = 0
 
     @property
     def type(self):
@@ -12,11 +13,12 @@ class DeclaredName:
 
     @property
     def value(self):
-        return self._value
+        return self._value, self._changes
 
     @value.setter
     def value(self, value):
         self._value = value
+        self._changes += 1
 
 
 class NamesDict:
@@ -114,10 +116,64 @@ class FunctionsDict:
         return name in self._dict
 
 
+class ExpressionSet:
+    def __init__(self):
+        self._set = []
+
+    @property
+    def set(self):
+        return self._set
+
+    def add(self, expression):
+        self._set.append([expression, 0])
+
+    def __get_element_index(self, expression):
+        for index, element in enumerate(self._set):
+            if element[0] == expression:
+                return index
+
+        return -1
+
+    def get_if_declared(self, expression):
+        index = self.__get_element_index(expression)
+        if index != -1:
+            element = self._set[index]
+            self._set[index] = [element[0], element[1] + 1]
+            return element[0]
+
+        return None
+
+    def get_occurrences(self, expression):
+        for expr, counter in self._set:
+            if expr == expression:
+                return counter
+        return 0
+
+    def save_result(self, expression, result):
+        for index, element in enumerate(self._set):
+            if element[0] == expression:
+                if len(element) == 3:
+                    raise ExpressionResultSavingError("Result for this expression has been already saved")
+                self._set[index] = [element[0], element[1], result]
+                return
+
+        raise ExpressionResultSavingError("Statement with given result has not been placed in expression set before")
+
+    def get_result(self, expression):
+        for element in self._set:
+            if element[0] == expression:
+                if len(element) == 3:
+                    return element[2]
+                else:
+                    return None
+        return None
+
+
 class Scope:
     def __init__(self):
         self._functions = [FunctionsDict()]
         self._names = [NamesDict()]
+        self._expressions = ExpressionSet()
 
     def start_new(self):
         self._functions.append(FunctionsDict())
@@ -154,3 +210,18 @@ class Scope:
     def read_name(self, name):
         index = self.get_dict_index_for_name(name)
         return self._names[index].read(name)
+
+    def add_expression(self, expression):
+        self._expressions.add(expression)
+
+    def get_expression(self, expression):
+        return self._expressions.get_if_declared(expression)
+
+    def get_expression_occurrence(self, expression):
+        return self._expressions.get_occurrences(expression)
+
+    def save_expression_result(self, expression, result):
+        self._expressions.save_result(expression, result)
+
+    def get_expression_result(self, expression):
+        return self._expressions.get_result(expression)

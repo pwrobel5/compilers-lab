@@ -8,10 +8,10 @@ class Node(object):
 
     @property
     def id(self):
-        return str(hash(self))
+        return str(id(self))
 
     @abc.abstractmethod
-    def execute(self, scope):
+    def execute(self, scope, opt):
         pass
 
 
@@ -19,36 +19,43 @@ class Program(Node):
     def __init__(self, statement_list):
         self._statement_list = statement_list
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         for statement in self._statement_list:
-            statement.execute(scope)
+            statement.execute(scope, opt)
 
 
 class Statement(Node):
     def __init__(self, statement_body):
         self._body = statement_body
 
-    def execute(self, scope):
-        return self._body.execute(scope)
+    def execute(self, scope, opt):
+        result = self._body.execute(scope, opt)
+
+        if opt:
+            saved_expression = scope.get_expression(self._body)
+            if saved_expression is not None:
+                self._body = saved_expression
+
+        return result
 
 
 class Block(Node):
     def __init__(self, statement_list):
         self._statement_list = statement_list
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         for statement in self._statement_list:
-            statement.execute(scope)
+            statement.execute(scope, opt)
 
 
 class FunctionArgumentList(Node):
     def __init__(self, arguments):
         self._arguments = arguments
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         result = []
         for argument in self._arguments:
-            result += [argument.execute(scope)]
+            result += [argument.execute(scope, opt)]
         return result
 
     def append_argument(self, argument):
@@ -60,7 +67,7 @@ class FunctionArgument(Node):
         self._name = arg_name
         self._type = arg_type
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         return self._name, self._type
 
 
@@ -71,7 +78,7 @@ class CustomFunction(Node):
         self._body = body
         self._returned_value = returned_value
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         scope.declare_function(self._name, self._arg_list, self._body, self._returned_value)
 
 
@@ -79,8 +86,23 @@ class Print(Node):
     def __init__(self, expression):
         self._expression = expression
 
-    def execute(self, scope):
-        print(self._expression.execute(scope))
+    def execute(self, scope, opt):
+        result = self._expression.execute(scope, opt)
+
+        if opt:
+            saved_expression = scope.get_expression(self._expression)
+            if saved_expression is not None:
+                self._expression = saved_expression
+
+        print(result)
+
+    @property
+    def expression(self):
+        return self._expression
+
+    def __eq__(self, other):
+        return isinstance(other, Print) and \
+               self.expression == other.expression
 
 
 class RepeatUntil(Node):
@@ -88,17 +110,17 @@ class RepeatUntil(Node):
         self._block = block
         self._condition = condition
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         scope.start_new()
-        self._block.execute(scope)
+        self._block.execute(scope, opt)
 
-        condition = self._condition.execute(scope)
+        condition = self._condition.execute(scope, opt)
         if not isinstance(condition, bool):
             raise ConditionError("Given repeat-until condition is not bool")
 
         while not condition:
-            self._block.execute(scope)
-            condition = self._condition.execute(scope)
+            self._block.execute(scope, opt)
+            condition = self._condition.execute(scope, opt)
         scope.end_current()
 
 
@@ -109,18 +131,18 @@ class For(Node):
         self._step_assignment = step_assignment
         self._block = block
 
-    def execute(self, scope):
-        self._initial_assignment.execute(scope)
+    def execute(self, scope, opt):
+        self._initial_assignment.execute(scope, opt)
 
-        condition = self._condition.execute(scope)
+        condition = self._condition.execute(scope, opt)
         if not isinstance(condition, bool):
             raise ConditionError("Given for condition is not bool")
 
         scope.start_new()
         while condition:
-            self._block.execute(scope)
-            self._step_assignment.execute(scope)
-            condition = self._condition.execute(scope)
+            self._block.execute(scope, opt)
+            self._step_assignment.execute(scope, opt)
+            condition = self._condition.execute(scope, opt)
         scope.end_current()
 
 
@@ -129,15 +151,15 @@ class While(Node):
         self._condition = condition
         self._block = block
 
-    def execute(self, scope):
-        condition = self._condition.execute(scope)
+    def execute(self, scope, opt):
+        condition = self._condition.execute(scope, opt)
         if not isinstance(condition, bool):
             raise ConditionError("Given while condition is not bool")
 
         scope.start_new()
         while condition:
-            self._block.execute(scope)
-            condition = self._condition.execute(scope)
+            self._block.execute(scope, opt)
+            condition = self._condition.execute(scope, opt)
         scope.end_current()
 
 
@@ -147,16 +169,16 @@ class ConditionalIfElse(Node):
         self._block_if = block_if
         self._block_else = block_else
 
-    def execute(self, scope):
-        condition = self._condition.execute(scope)
+    def execute(self, scope, opt):
+        condition = self._condition.execute(scope, opt)
         if not isinstance(condition, bool):
             raise ConditionError("Given if-else condition is not bool")
 
         scope.start_new()
         if condition:
-            self._block_if.execute(scope)
+            self._block_if.execute(scope, opt)
         else:
-            self._block_else.execute(scope)
+            self._block_else.execute(scope, opt)
         scope.end_current()
 
 
@@ -165,14 +187,14 @@ class ConditionalIf(Node):
         self._condition = condition
         self._statement = statement
 
-    def execute(self, scope):
-        condition = self._condition.execute(scope)
+    def execute(self, scope, opt):
+        condition = self._condition.execute(scope, opt)
         if not isinstance(condition, bool):
             raise ConditionError("Given if condition is not bool")
 
         if condition:
             scope.start_new()
-            self._statement.execute(scope)
+            self._statement.execute(scope, opt)
             scope.end_current()
 
 
@@ -180,10 +202,16 @@ class CallArgumentList(Node):
     def __init__(self, arguments):
         self._arguments = arguments
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         result = []
-        for argument in self._arguments:
-            result.append(argument.execute(scope))
+        for index, argument in enumerate(self._arguments):
+            result.append(argument.execute(scope, opt))
+
+            if opt:
+                saved_argument = scope.get_expression(argument)
+                if saved_argument is not None:
+                    self._arguments[index] = saved_argument
+
         return result
 
     def append_argument(self, argument):
@@ -195,10 +223,10 @@ class Call(Node):
         self._function_name = function_name
         self._arg_list = arg_list
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         function = scope.read_function(self._function_name)
-        call_arguments = self._arg_list.execute(scope)
-        function_arguments = function.arg_list.execute(scope)
+        call_arguments = self._arg_list.execute(scope, opt)
+        function_arguments = function.arg_list.execute(scope, opt)
 
         if len(call_arguments) != len(function_arguments):
             raise ValueError("Difference in number of arguments for call, expected: {} given: {}"
@@ -217,11 +245,11 @@ class Call(Node):
 
             scope.declare_name(argument_name, expected_type, call_argument)
 
-        function.body.execute(scope)
+        function.body.execute(scope, opt)
         result = None
 
         if function.returned_value:
-            result = function.returned_value.execute(scope)
+            result = function.returned_value.execute(scope, opt)
 
         scope.end_current()
         return result
@@ -232,8 +260,8 @@ class PreFixExpression(Node):
         self._name = name
         self._operation = operation
 
-    def execute(self, scope):
-        value = scope.read_name(self._name)
+    def execute(self, scope, opt):
+        value, _ = scope.read_name(self._name)
 
         if self._operation == "++":
             value += 1
@@ -249,8 +277,8 @@ class PostFixExpression(Node):
         self._name = name
         self._operation = operation
 
-    def execute(self, scope):
-        value = scope.read_name(self._name)
+    def execute(self, scope, opt):
+        value, _ = scope.read_name(self._name)
 
         if self._operation == "++":
             scope.assign_name(self._name, value + 1)
@@ -265,8 +293,8 @@ class BuiltInFunction(Node):
         self._function = function
         self._arguments = arguments
 
-    def execute(self, scope):
-        executed_arguments = self._arguments.execute(scope)
+    def execute(self, scope, opt):
+        executed_arguments = self._arguments.execute(scope, opt)
         return self._function(*executed_arguments)
 
 
@@ -275,16 +303,30 @@ class Assignment(Node):
         self._name = name
         self._value = value
 
-    def execute(self, scope):
-        scope.assign_name(self._name, self._value.execute(scope))
+    def execute(self, scope, opt):
+        executed_value = self._value.execute(scope, opt)
+
+        if opt:
+            saved_value = scope.get_expression(self._value)
+            if saved_value is not None:
+                self._value = saved_value
+
+        scope.assign_name(self._name, executed_value)
 
 
 class Minus(Node):
     def __init__(self, value):
         self._value = value
 
-    def execute(self, scope):
-        return (-1) * self._value.execute(scope)
+    def execute(self, scope, opt):
+        executed_value = self._value.execute(scope, opt)
+
+        if opt:
+            saved_value = scope.get_expression(self._value)
+            if saved_value is not None:
+                self._value = saved_value
+
+        return (-1) * executed_value
 
 
 class Declaration(Node):
@@ -293,9 +335,16 @@ class Declaration(Node):
         self._value_type = value_type
         self._value = value
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         if self._value is not None:
-            scope.declare_name(self._name, self._value_type, self._value.execute(scope))
+            executed_value = self._value.execute(scope, opt)
+
+            if opt:
+                saved_value = scope.get_expression(self._value)
+                if saved_value is not None:
+                    self._value = saved_value
+
+            scope.declare_name(self._name, self._value_type, executed_value)
         else:
             scope.declare_name(self._name, self._value_type, None)
 
@@ -306,12 +355,17 @@ class Conversion(Node):
         self._operation = operation
         self._value = value
 
-    def execute(self, scope):
-        value = self._value.execute(scope)
+    def execute(self, scope, opt):
+        value = self._value.execute(scope, opt)
 
         if not isinstance(value, self._type_from):
             raise ConversionError("Converted value is in incorrect type, expected {} given {}"
                                   .format(self._type_from.__name__, type(value).__name__))
+
+        if opt:
+            saved_value = scope.get_expression(self._value)
+            if saved_value is not None:
+                self._value = saved_value
 
         return self._operation(value)
 
@@ -322,52 +376,142 @@ class BinaryOperation(Node):
         self._operation = operation
         self._right = right
 
-    def execute(self, scope):
-        left = self._left.execute(scope)
-        right = self._right.execute(scope)
+    def execute(self, scope, opt):
+        left = self._left.execute(scope, opt)
+        right = self._right.execute(scope, opt)
+
+        if scope.get_expression(self) is None:
+            scope.add_expression(self)
+
+        result = scope.get_expression_result(self)
+        if result is not None:
+            return result
 
         if type(left) == type(right):
-            return self._operation(self._left.execute(scope), self._right.execute(scope))
+            result = self._operation(left, right)
+            scope.save_expression_result(self, result)
+            return result
         else:
             raise BinaryOperationError("Types of arguments do not match! Left is {} while right is {}"
                                        .format(type(left).__name__, type(right).__name__))
+
+    @property
+    def left(self):
+        return self._left
+
+    @property
+    def right(self):
+        return self._right
+
+    @property
+    def operation(self):
+        return self._operation
+
+    def __eq__(self, other):
+        return isinstance(other, BinaryOperation) and \
+               self.left == other.left and \
+               self.right == other.right and \
+               self.operation == other.operation
+
+    def __hash__(self):
+        return hash((self._left, self._right, self._operation))
 
 
 class Real(Node):
     def __init__(self, value):
         self._value = value
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         return self._value
+
+    @property
+    def value(self):
+        return self._value
+
+    def __eq__(self, other):
+        return isinstance(other, Real) and \
+               self._value == other.value
+
+    def __hash__(self):
+        return hash(self._value)
 
 
 class Integer(Node):
     def __init__(self, value):
         self._value = value
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         return self._value
+
+    @property
+    def value(self):
+        return self._value
+
+    def __eq__(self, other):
+        return isinstance(other, Integer) and \
+               self.value == other.value
+
+    def __hash__(self):
+        return hash(self._value)
 
 
 class Boolean(Node):
     def __init__(self, value):
         self._value = value
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         return self._value
+
+    @property
+    def value(self):
+        return self._value
+
+    def __eq__(self, other):
+        return isinstance(other, Boolean) and \
+               self.value == other.value
 
 
 class String(Node):
     def __init__(self, value):
         self._value = value
 
-    def execute(self, scope):
+    def execute(self, scope, opt):
         return self._value
+
+    @property
+    def value(self):
+        return self._value
+
+    def __eq__(self, other):
+        return isinstance(other, String) and \
+               self.value == other.value
+
+    def __hash__(self):
+        return hash(self._value)
 
 
 class Name(Node):
     def __init__(self, name):
         self._name = name
+        self._changes = None  # to not include name in common subexpressions after variable modification
 
-    def execute(self, scope):
-        return scope.read_name(self._name)
+    def execute(self, scope, opt):
+        value, changes = scope.read_name(self._name)
+        self._changes = changes
+        return value
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def changes(self):
+        return self._changes
+
+    def __eq__(self, other):
+        return isinstance(other, Name) and \
+               self.name == other.name and \
+               self.changes == other.changes
+
+    def __hash__(self):
+        return hash((self._name, self._changes))
