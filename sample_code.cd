@@ -11,10 +11,18 @@ int x := 10;
 int y := 20;
 
 int t := x + y * x;
-int w := x + y * x;
+int w := 2 * x;
 
 int a := 2 + 3;
-int b := 2 + 3;
+int b := 0 - x;
+
+real h := 2 / 3;
+real i := 3 / 2;
+
+print(h);
+print(i);
+
+string g := "a" + "bc";
 
 int d;
 int e := 13;
@@ -24,6 +32,7 @@ print(w);
 
 print(a);
 print(b);
+print(g);
 
 print(j(x, y));
 
@@ -31,3 +40,8 @@ multiply_and_print(x, y);
 
 print(2 + 3);
 print(2 + 3);
+
+while(x > a - 1) {
+  print(x);
+  --x;
+};

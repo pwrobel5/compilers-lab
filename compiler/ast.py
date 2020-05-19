@@ -390,7 +390,7 @@ class Conversion(Node):
 class BinaryOperation(Node):
     def __init__(self, left, operation, right):
         self._left = left
-        self._operation = operation
+        self._operation, self._is_reversible = operation
         self._right = right
 
     def execute(self, scope, opt):
@@ -425,10 +425,15 @@ class BinaryOperation(Node):
         return self._operation
 
     def __eq__(self, other):
-        return isinstance(other, BinaryOperation) and \
-               self.left == other.left and \
-               self.right == other.right and \
-               self.operation == other.operation
+        common_condition = isinstance(other, BinaryOperation) and self.operation == other.operation
+
+        if self._is_reversible:
+            return common_condition and \
+                   ((self.left == other.left and self.right == other.right) or
+                    (self.left == other.right and self.right == other.left))
+        else:
+            return common_condition and \
+                   self.left == other.left and self.right == other.right
 
     def __hash__(self):
         return hash((self._left, self._right, self._operation))

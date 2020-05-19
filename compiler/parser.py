@@ -18,19 +18,20 @@ class Parser:
         ('nonassoc', 'INCR', 'DECR')
     )
 
+    # bool value in tuple - determines if operation is reversible
     operations = {
-        "+": operator.add,
-        "-": operator.sub,
-        "*": operator.mul,
-        "/": operator.truediv,
-        "%": operator.mod,
-        "**": operator.pow,
-        "==": operator.eq,
-        "!=": operator.ne,
-        "<": operator.lt,
-        "<=": operator.le,
-        ">": operator.gt,
-        ">=": operator.ge
+        "+": (operator.add, True),
+        "-": (operator.sub, False),
+        "*": (operator.mul, True),
+        "/": (operator.truediv, False),
+        "%": (operator.mod, False),
+        "**": (operator.pow, False),
+        "==": (operator.eq, True),
+        "!=": (operator.ne, True),
+        "<": (operator.lt, False),
+        "<=": (operator.le, False),
+        ">": (operator.gt, False),
+        ">=": (operator.ge, False)
     }
 
     built_in_functions = {
@@ -53,6 +54,13 @@ class Parser:
         "string": str
     }
 
+    python_types_to_ast = {
+        int: ast.Integer,
+        float: ast.Real,
+        bool: ast.Boolean,
+        str: ast.String
+    }
+
     conversions = {
         "inttostr": (int, str),
         "inttoreal": (int, float),
@@ -71,6 +79,14 @@ class Parser:
     def __init__(self, tokens):
         self._yacc = None
         self.tokens = tokens
+
+    @staticmethod
+    def is_number(element):
+        return isinstance(element, (ast.Integer, ast.Real))
+
+    @staticmethod
+    def is_simple_value(element):
+        return isinstance(element, (ast.Integer, ast.Real, ast.String, ast.Boolean))
 
     @property
     def yacc(self):
@@ -239,6 +255,62 @@ class Parser:
                       | expression GE expression"""
         left = p[1]
         right = p[3]
+
+        # operation between two constants
+        if Parser.is_simple_value(left) and Parser.is_simple_value(right) and type(left) == type(right):
+            result = self.operations[p[2]][0](left.value, right.value)
+            result_type = self.python_types_to_ast[type(result)]
+            p[0] = result_type(result)
+            return
+
+        elif p[2] == "+" or p[2] == "-":
+            # 0 + x = x or 0 - x = -x
+            if Parser.is_number(left) and left.value == 0:
+                p[0] = right if p[2] == "+" else ast.Minus(right)
+                return
+            # x +/- 0 = x
+            elif Parser.is_number(right) and right.value == 0:
+                p[0] = left
+                return
+
+        elif p[2] == "*":
+            # 1 * x = x
+            if Parser.is_number(left) and left.value == 1:
+                p[0] = right
+                return
+            # x * 1 = x
+            elif Parser.is_number(right) and right.value == 1:
+                p[0] = left
+                return
+            # x * 0 = 0 * x = 0
+            elif (Parser.is_number(left) and left.value == 0) or (Parser.is_number(right) and right.value == 0):
+                p[0] = ast.Integer(0)
+                return
+            # x * 2 = x + x
+            elif Parser.is_number(right) and right.value == 2:
+                p[0] = ast.BinaryOperation(left, self.operations["+"], left)
+                return
+            # 2 * x = x + x
+            elif Parser.is_number(left) and left.value == 2:
+                p[0] = ast.BinaryOperation(right, self.operations["+"], right)
+                return
+
+        elif p[2] == "/":
+            # x / 1 = x
+            if Parser.is_number(right) and right.value == 1:
+                p[0] = left
+                return
+            # x / 2 = 0.5 * x
+            elif Parser.is_number(right) and right.value == 2:
+                p[0] = ast.BinaryOperation(left, self.operations["*"], ast.Real(0.5))
+                return
+
+        elif p[2] == "**":
+            # x ** 2 = x * x
+            if Parser.is_number(right) and right.value == 2:
+                p[0] = ast.BinaryOperation(left, self.operations["*"], left)
+                return
+
         p[0] = ast.BinaryOperation(left, self.operations[p[2]], right)
 
     def p_expression_real(self, p):
