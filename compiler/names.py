@@ -6,6 +6,7 @@ class DeclaredName:
         self._type = value_type
         self._value = value
         self._changes = 0
+        self._used = False
 
     @property
     def type(self):
@@ -14,6 +15,13 @@ class DeclaredName:
     @property
     def value(self):
         return self._value, self._changes
+
+    @property
+    def used(self):
+        return self._used
+
+    def mark_as_used(self):
+        self._used = True
 
     @value.setter
     def value(self, value):
@@ -38,7 +46,7 @@ class NamesDict:
 
     def declare(self, name, value_type, value):
         if value is None:
-            value = self.defaults[value_type]
+            value = self.defaults[value_type.__name__]
 
         if name in self._dict:
             raise ValueError("Variable is already declared!")
@@ -66,6 +74,7 @@ class NamesDict:
         if name not in self._dict:
             raise ValueError("Variable not defined!")
 
+        self._dict[name].mark_as_used()
         return self._dict[name].value
 
     def contains(self, name):
@@ -77,6 +86,7 @@ class DeclaredFunction:
         self._arg_list = arg_list
         self._body = body
         self._returned_value = returned_value
+        self._used = False
 
     @property
     def arg_list(self):
@@ -89,6 +99,13 @@ class DeclaredFunction:
     @property
     def returned_value(self):
         return self._returned_value
+
+    @property
+    def used(self):
+        return self._used
+
+    def mark_as_used(self):
+        self._used = True
 
 
 class FunctionsDict:
@@ -110,6 +127,7 @@ class FunctionsDict:
         if name not in self._dict:
             raise ValueError("Function not declared")
 
+        self._dict[name].mark_as_used()
         return self._dict[name]
 
     def contains(self, name):
@@ -193,6 +211,10 @@ class Scope:
 
         raise ValueError("Function {} not declared in any scope".format(name))
 
+    def get_unused_functions(self):
+        function_scope = self._functions[-1].dict
+        return {k: v for k, v in function_scope.items() if not v.used}
+
     def declare_name(self, name, value_type, value):
         self._names[-1].declare(name, value_type, value)
 
@@ -210,6 +232,10 @@ class Scope:
     def read_name(self, name):
         index = self.get_dict_index_for_name(name)
         return self._names[index].read(name)
+
+    def get_unused_names(self):
+        name_scope = self._names[-1].dict
+        return {k: v for k, v in name_scope.items() if not v.used}
 
     def add_expression(self, expression):
         self._expressions.add(expression)

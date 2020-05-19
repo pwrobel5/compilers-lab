@@ -14,6 +14,20 @@ class Node(object):
     def execute(self, scope, opt):
         pass
 
+    @staticmethod
+    def remove_needless_statements(statement_list, scope):
+        needless_statements = []
+        unused_names = scope.get_unused_names()
+        unused_functions = scope.get_unused_functions()
+
+        for statement in statement_list:
+            if isinstance(statement, (Declaration, Assignment)) and statement.name in unused_names.keys():
+                needless_statements.append(statement)
+            elif isinstance(statement, CustomFunction) and statement.name in unused_functions.keys():
+                needless_statements.append(statement)
+
+        return list(filter(lambda x: x not in needless_statements, statement_list))
+
 
 class Program(Node):
     def __init__(self, statement_list):
@@ -23,20 +37,8 @@ class Program(Node):
         for statement in self._statement_list:
             statement.execute(scope, opt)
 
-
-class Statement(Node):
-    def __init__(self, statement_body):
-        self._body = statement_body
-
-    def execute(self, scope, opt):
-        result = self._body.execute(scope, opt)
-
         if opt:
-            saved_expression = scope.get_expression(self._body)
-            if saved_expression is not None:
-                self._body = saved_expression
-
-        return result
+            self._statement_list = Node.remove_needless_statements(self._statement_list, scope)
 
 
 class Block(Node):
@@ -46,6 +48,9 @@ class Block(Node):
     def execute(self, scope, opt):
         for statement in self._statement_list:
             statement.execute(scope, opt)
+
+        if opt:
+            self._statement_list = Node.remove_needless_statements(self._statement_list, scope)
 
 
 class FunctionArgumentList(Node):
@@ -80,6 +85,10 @@ class CustomFunction(Node):
 
     def execute(self, scope, opt):
         scope.declare_function(self._name, self._arg_list, self._body, self._returned_value)
+
+    @property
+    def name(self):
+        return self._name
 
 
 class Print(Node):
@@ -313,6 +322,10 @@ class Assignment(Node):
 
         scope.assign_name(self._name, executed_value)
 
+    @property
+    def name(self):
+        return self._name
+
 
 class Minus(Node):
     def __init__(self, value):
@@ -347,6 +360,10 @@ class Declaration(Node):
             scope.declare_name(self._name, self._value_type, executed_value)
         else:
             scope.declare_name(self._name, self._value_type, None)
+
+    @property
+    def name(self):
+        return self._name
 
 
 class Conversion(Node):

@@ -89,7 +89,7 @@ class Parser:
                      | customfunc
                      | procedure
                      | print"""
-        p[0] = ast.Statement(p[1])
+        p[0] = p[1]
 
     def p_block(self, p):
         """block : '{' statement_set '}'"""

@@ -1,5 +1,7 @@
 function multiply(int x, int y) { x := x * y; } return x;
 
+function multiply2(int x, int y) { x := x * y; } return x;
+
 procedure multiply_and_print(int x, int y) {
   int result := multiply(x, y);
   print(result);
@@ -14,14 +16,15 @@ int w := x + y * x;
 int a := 2 + 3;
 int b := 2 + 3;
 
+int d;
+int e := 13;
+
 print(t);
 print(w);
 
 print(a);
 print(b);
 
-int z := multiply(x, y);
-print(z);
 print(j(x, y));
 
 multiply_and_print(x, y);

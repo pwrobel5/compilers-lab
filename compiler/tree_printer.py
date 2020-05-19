@@ -21,12 +21,6 @@ class TreePrinter:
             graph.edge(self.id, statement.print_tree(graph))
         return self.id
 
-    @add_to_class(ast.Statement)
-    def print_tree(self, graph):
-        graph.node(self.id, "Statement")
-        graph.edge(self.id, self._body.print_tree(graph))
-        return self.id
-
     @add_to_class(ast.Block)
     def print_tree(self, graph):
         graph.node(self.id, "Block")
