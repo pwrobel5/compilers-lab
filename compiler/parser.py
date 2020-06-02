@@ -10,6 +10,7 @@ from compiler import ast
 class Parser:
     precedence = (
         ('nonassoc', 'IFX'),  # to avoid shift/reduce conflicts with conditionals
+        ('left', 'OR', 'AND', 'XOR'),
         ('left', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE'),
         ('left', 'ADD', 'SUB'),
         ('left', 'MUL', 'DIV', 'MOD'),
@@ -31,7 +32,10 @@ class Parser:
         "<": (operator.lt, False),
         "<=": (operator.le, False),
         ">": (operator.gt, False),
-        ">=": (operator.ge, False)
+        ">=": (operator.ge, False),
+        "&": (operator.and_, True),
+        "|": (operator.or_, True),
+        "^": (operator.xor, True)
     }
 
     built_in_functions = {
@@ -252,12 +256,21 @@ class Parser:
                       | expression LT expression
                       | expression LE expression
                       | expression GT expression
-                      | expression GE expression"""
+                      | expression GE expression
+                      | expression AND expression
+                      | expression OR expression
+                      | expression XOR expression"""
         left = p[1]
         right = p[3]
 
         # operation between two constants
         if Parser.is_simple_value(left) and Parser.is_simple_value(right) and type(left) == type(right):
+            if isinstance(left, ast.Boolean):
+                if p[2] == "+":
+                    p[2] = "|"
+                elif p[2] == "*":
+                    p[2] = "&"
+
             result = self.operations[p[2]][0](left.value, right.value)
             result_type = self.python_types_to_ast[type(result)]
             p[0] = result_type(result)

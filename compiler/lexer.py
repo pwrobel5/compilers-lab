@@ -27,7 +27,7 @@ class Lexer:
         'strtoboolean': 'STRTOBOOLEAN'
     }
     tokens = ['INCR', 'DECR', 'ADD', 'SUB', 'MUL', 'DIV', 'MOD',
-              'POW', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE',
+              'POW', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE', 'AND', 'OR', 'XOR',
               'ASSIGN', 'TYPE', 'FUNCTION', 'NAME', 'REAL', 'INTEGER',
               'BOOLEAN', 'STRING'
               ] + list(reserved.values())
@@ -49,6 +49,9 @@ class Lexer:
     t_LE = r'<='
     t_GT = r'>'
     t_GE = r'>='
+    t_AND = r'&'
+    t_OR = r'\|'
+    t_XOR = r'\^'
     t_ASSIGN = r':='
 
     def __init__(self):
