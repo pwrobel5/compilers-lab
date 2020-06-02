@@ -23,10 +23,20 @@ def print_tokens(code):
         tok = lexer.lexer.token()
 
 
-def run(code, opt, ast_file_name=None):
+def run(code, opt, ast_file_name=None, repl_mode=False):
+    if repl_mode:
+        code += ";"
+
     res = parser.parse(lexer, code)
     try:
-        res.execute(scope, opt)
+        if repl_mode:
+            statements = res.statement_list
+            for statement in statements:
+                statement_result = statement.execute(scope, opt)
+                if statement_result is not None:
+                    print(statement_result)
+        else:
+            res.execute(scope, opt)
 
         if ast_file_name:
             graph = Digraph(format="png")
@@ -67,7 +77,7 @@ def run_interactive_console(ast_file_name):
         elif s.lower() == "exit":
             break
 
-        run(s, ast_file_name)
+        run(s, ast_file_name, repl_mode=True)
 
 
 def main():

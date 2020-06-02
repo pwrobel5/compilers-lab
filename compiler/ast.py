@@ -40,6 +40,10 @@ class Program(Node):
         if opt:
             self._statement_list = Node.remove_needless_statements(self._statement_list, scope)
 
+    @property
+    def statement_list(self):
+        return self._statement_list
+
 
 class Block(Node):
     def __init__(self, statement_list):
