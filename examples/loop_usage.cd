@@ -1,0 +1,29 @@
+int x := 10;
+while(x > 0) {
+    print(sin(x));
+    x--;
+};
+
+boolean y := (x <= 0);
+if(y) {
+    print("x is less or equal 0");
+};
+
+int z := 12;
+
+if(z > 10) {
+    print("z is bigger than 10");
+}
+else {
+    print("z is less or equal 10");
+};
+
+for(z := 0; z < 10; z := z + 1) {
+    print(j(z, x));
+};
+
+repeat {
+    z := z - 1;
+} until(z < 0);
+
+print(z);

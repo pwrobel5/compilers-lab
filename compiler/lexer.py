@@ -1,7 +1,11 @@
+import difflib
+
 import ply.lex as lex
 
 
 class Lexer:
+    MINIMAL_SIMILARITY = 1
+
     reserved = {
         'if': 'IF',
         'else': 'ELSE',
@@ -61,6 +65,10 @@ class Lexer:
     def lexer(self):
         return self._lexer
 
+    @staticmethod
+    def compare_strings(first, second):
+        return sum([i[0] != ' ' for i in difflib.ndiff(first, second)]) / 2
+
     def t_TYPE(self, t):
         r"""\b(int|real|boolean|string)\b"""
         return t
@@ -96,6 +104,16 @@ class Lexer:
     def t_NAME(self, t):
         r"""[a-zA-Z_][a-zA-Z0-9_]*"""
         t.type = self.reserved.get(t.value.lower(), 'NAME')
+        if t.type == "NAME":
+            matches = difflib.get_close_matches(t.value, self.reserved.keys())
+            matches = list(map(lambda x: (x, Lexer.compare_strings(x, t.value)), matches))
+            matches.sort(key=lambda x: -x[1])
+
+            if len(matches) > 0 and matches[0][1] <= self.MINIMAL_SIMILARITY:
+                word_name = matches[0][0]
+                t.type = self.reserved[word_name]
+                t.value = word_name
+
         return t
 
     t_ignore = " \t"

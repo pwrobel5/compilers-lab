@@ -9,7 +9,7 @@ from compiler import ast
 
 class Parser:
     precedence = (
-        ('nonassoc', 'IFX'),  # to avoid shift/reduce conflicts with conditionals
+        ('right', 'IFX'),  # to avoid shift/reduce conflicts with conditionals
         ('left', 'OR', 'AND', 'XOR'),
         ('left', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE'),
         ('left', 'ADD', 'SUB'),
@@ -167,15 +167,11 @@ class Parser:
         p[0] = ast.While(p[3], p[5])
 
     def p_if_else_conditional(self, p):
-        """conditional : IF '(' expression ')' statement ELSE statement
-                       | IF '(' expression ')' block ELSE statement
-                       | IF '(' expression ')' statement ELSE block
-                       | IF '(' expression ')' block ELSE block"""
+        """conditional : IF '(' expression ')' block ELSE block"""
         p[0] = ast.ConditionalIfElse(p[3], p[5], p[7])
 
     def p_if_conditional(self, p):
-        """conditional : IF '(' expression ')' statement %prec IFX
-                       | IF '(' expression ')' block %prec IFX"""
+        """conditional : IF '(' expression ')' block %prec IFX"""
         p[0] = ast.ConditionalIf(p[3], p[5])
 
     def p_call_args(self, p):
