@@ -67,20 +67,23 @@ def interpret_file(file_name, ast_file_name, opt):
 
 
 def run_interactive_console(ast_file_name, print_tokens_mode):
-    while True:
+    run_console = True
+    while run_console:
+        s = None
         try:
             s = input('calc > ')
         except (EOFError, KeyboardInterrupt):
-            break
+            run_console = False
         if not s:
             continue
         elif s.lower() == "exit":
-            break
+            run_console = False
 
-        if print_tokens_mode:
-            print_tokens(s)
-        else:
-            run(s, ast_file_name, repl_mode=True)
+        if run_console:
+            if print_tokens_mode:
+                print_tokens(s)
+            else:
+                run(s, ast_file_name, repl_mode=True)
 
 
 def main():
