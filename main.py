@@ -66,7 +66,7 @@ def interpret_file(file_name, ast_file_name, opt):
         run(code, opt, ast_file_name)
 
 
-def run_interactive_console(ast_file_name):
+def run_interactive_console(ast_file_name, print_tokens_mode):
     while True:
         try:
             s = input('calc > ')
@@ -77,7 +77,10 @@ def run_interactive_console(ast_file_name):
         elif s.lower() == "exit":
             break
 
-        run(s, ast_file_name, repl_mode=True)
+        if print_tokens_mode:
+            print_tokens(s)
+        else:
+            run(s, ast_file_name, repl_mode=True)
 
 
 def main():
@@ -85,6 +88,7 @@ def main():
     argparser.add_argument("input_file", nargs="?", type=str, help="Path to file with code")
     argparser.add_argument("-ast", type=str, help="Draw AST to given filename")
     argparser.add_argument("-opt", action="store_true", help="Use optimisations")
+    argparser.add_argument("-token", action="store_true", help="Print tokens")
 
     args = argparser.parse_args()
     input_file_name = args.input_file
@@ -93,7 +97,7 @@ def main():
     if input_file_name:
         interpret_file(input_file_name, args.ast, opt)
     else:
-        run_interactive_console(args.ast)
+        run_interactive_console(args.ast, args.token)
 
 
 if __name__ == '__main__':
