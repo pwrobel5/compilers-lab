@@ -1,0 +1,12 @@
+print(2 + 3);
+
+int x := 2 ** 2;
+int s := x ** 2;
+print(s);
+
+int y := x + 0;
+print(y);
+
+real z := 1.0;
+real t := z / 2.0;
+print(t);

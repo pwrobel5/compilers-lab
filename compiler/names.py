@@ -32,9 +32,9 @@ class DeclaredName:
 class NamesDict:
     defaults = {
         "int": 0,
-        "real": 0.0,
-        "boolean": False,
-        "string": ""
+        "float": 0.0,
+        "bool": False,
+        "str": ""
     }
 
     def __init__(self):

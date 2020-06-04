@@ -1,0 +1,9 @@
+int t := 11;
+int x := 0;
+int y := t + 7;
+print(y);
+
+while(x < t - 1) {
+  y := t + 7;
+  ++x;
+};

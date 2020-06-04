@@ -28,15 +28,16 @@ def run(code, opt, ast_file_name=None, repl_mode=False):
 
     res = parser.parse(lexer, code)
 
-    if repl_mode:
-        res.activate_repl_mode()
+    if res is not None:
+        if repl_mode:
+            res.activate_repl_mode()
 
-    res.execute(scope, opt)
+        res.execute(scope, opt)
 
-    if ast_file_name:
-        graph = Digraph(format="png")
-        res.print_tree(graph)
-        graph.render(ast_file_name)
+        if ast_file_name:
+            graph = Digraph(format="png")
+            res.print_tree(graph)
+            graph.render(ast_file_name)
 
 
 def interpret_file(file_name, ast_file_name, opt):

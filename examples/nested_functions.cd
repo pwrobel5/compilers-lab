@@ -1,0 +1,11 @@
+function multiply(int x, int y) { x := x * y; } return x;
+
+procedure multiply_and_print(int x, int y) {
+  int result := multiply(x, y);
+  print(result);
+};
+
+int x := 10;
+int y := 20;
+
+multiply_and_print(x, y);
