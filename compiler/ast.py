@@ -32,10 +32,33 @@ class Node(object):
 class Program(Node):
     def __init__(self, statement_list):
         self._statement_list = statement_list
+        self._repl_mode = False
 
     def execute(self, scope, opt):
         for statement in self._statement_list:
-            statement.execute(scope, opt)
+            try:
+                result = statement.execute(scope, opt)
+
+                if self._repl_mode and result is not None:
+                    print(result)
+
+            except BinaryOperationError as err:
+                msg, = err.args
+                print("Error with binary operation: {}".format(msg))
+            except ConditionError as err:
+                msg, = err.args
+                print("Error with given condition: {}".format(msg))
+            except ConversionError as err:
+                msg, = err.args
+                print("Error with conversion: {}".format(msg))
+            except AssignmentError as err:
+                msg, = err.args
+                print("Error with assignment: {}".format(msg))
+            except ValueError as err:
+                msg, = err.args
+                print("Value Error: {}".format(msg))
+            except:
+                print("Unrecognized error")
 
         if opt:
             self._statement_list = Node.remove_needless_statements(self._statement_list, scope)
@@ -43,6 +66,9 @@ class Program(Node):
     @property
     def statement_list(self):
         return self._statement_list
+
+    def activate_repl_mode(self):
+        self._repl_mode = True
 
 
 class Block(Node):

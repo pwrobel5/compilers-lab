@@ -1,57 +1,71 @@
+import math
+import operator
+
+import ply.lex as lex
+import ply.yacc as yacc
+from scipy.special import jv
+
 reserved = {
-    'if' : 'IF',
-    'else' : 'ELSE',
-    'while' : 'WHILE',
-    'for' : 'FOR',
-    'function' : 'CUSTOMFUNC',
-    'call' : 'CALL'
+    'if': 'IF',
+    'else': 'ELSE',
+    'while': 'WHILE',
+    'for': 'FOR',
+    'function': 'CUSTOMFUNC',
+    'call': 'CALL'
 }
 
 tokens = [
-    'NAME', 'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'BESSEL', 'RELATION'
- ] + list(reserved.values())
+             'REAL', 'NUMBER', 'FUNCTION', 'POWER', 'BESSEL', 'RELATION', 'NAME'
+         ] + list(reserved.values())
 
 literals = ['+', '-', '*', '/', '%', '=', ';', '(', ')', '{', '}']
 
 # Tokens
-
-t_FUNCTION = r'(sin|asin|cos|acos|tan|atan|exp|log|sqrt)(?i)'
 t_BESSEL = r'j'
 t_RELATION = r'<|>|<=|>=|==|!='
 
+
+def t_FUNCTION(t):
+    r"""(sin|asin|cos|acos|tan|atan|exp|log|sqrt)"""
+    return t
+
+
 def t_POWER(t):
-    r'\*\*'
+    r"""\*\*"""
     t.value = '**'
     return t
 
+
 def t_REAL(t):
-    r'\-?\d+\.\d*|\.\d+'
+    r"""\-?\d+\.\d*|\.\d+"""
     t.value = float(t.value)
     return t
 
+
 def t_NUMBER(t):
-    r'\-?\d+'
+    r"""\-?\d+"""
     t.value = int(t.value)
     return t
 
+
 def t_NAME(t):
-    r'[a-zA-Z_][a-zA-Z0-9_]*'
+    r"""[a-zA-Z_][a-zA-Z0-9_]*"""
     t.type = reserved.get(t.value.lower(), 'NAME')
     return t
 
+
 t_ignore = " \t"
 
+
 def t_newline(t):
-    r'\n+'
+    r"""\n+"""
     t.lexer.lineno += t.value.count("\n")
+
 
 def t_error(t):
     print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
-# Build the lexer
-import ply.lex as lex
-lexer = lex.lex()
 
 # Parsing rules
 precedence = (
@@ -63,11 +77,12 @@ precedence = (
 
 names = {}
 
+
 def p_sequence(p):
-    '''sequence : statement
+    """sequence : statement
                 | '{' block '}'
        block : statement %prec IFX
-             | statement ';' block '''
+             | statement ';' block """
 
     statement_list = []
     for statement in p[1:]:
@@ -75,103 +90,120 @@ def p_sequence(p):
             continue
 
         statement_list.append(statement)
-    
+
     p[0] = ("sequence", statement_list)
 
+
 def p_statement_expr(p):
-    '''statement : relation
+    """statement : relation
                  | assignment
                  | conditional
                  | while
                  | for
                  | customfunc
-                 | call'''
+                 | call"""
     p[0] = p[1]
 
+
 def p_statement_print(p):
-    'statement : expression'
+    """statement : expression"""
     p[0] = ("statement", p[1])
 
+
 def p_conditional(p):
-    '''conditional : IF '(' relation ')' sequence %prec IFX '''
+    """conditional : IF '(' relation ')' sequence %prec IFX """
     p[0] = ("if", p[3], p[5])
 
+
 def p_conditional_else(p):
-    '''conditional : IF '(' relation ')' sequence ELSE sequence '''
+    """conditional : IF '(' relation ')' sequence ELSE sequence """
     p[0] = ("if", p[3], p[5], p[7])
 
+
 def p_while(p):
-    '''while : WHILE '(' relation ')' sequence '''
+    """while : WHILE '(' relation ')' sequence """
     p[0] = ("while", p[3], p[5])
 
+
 def p_for(p):
-    '''for : FOR '(' assignment ';' relation ';' assignment ')' sequence '''
+    """for : FOR '(' assignment ';' relation ';' assignment ')' sequence """
     p[0] = ("for", p[3], p[5], p[7], p[9])
 
+
 def p_customfunc(p):
-    '''customfunc : CUSTOMFUNC NAME '(' ')' sequence '''
+    """customfunc : CUSTOMFUNC NAME '(' ')' sequence """
     p[0] = ("customfunc", p[2], p[5])
 
+
 def p_call(p):
-    '''call : CALL NAME '''
+    """call : CALL NAME """
     p[0] = ("call", p[2])
 
+
 def p_assignment(p):
-    '''assignment : NAME '=' expression
-                  | NAME '=' relation'''
+    """assignment : NAME '=' expression
+                  | NAME '=' relation"""
     p[0] = ("assignment", p[1], p[3])
 
+
 def p_expression(p):
-    '''expression : number
+    """expression : number
                   | name
                   | number rpnexpr
-                  | name rpnexpr'''
-    
+                  | name rpnexpr"""
+
     args = [p[1]]
     if len(p) > 2:
         args += p[2]
     p[0] = ("expression", args)
 
+
 def p_rpnexpr(p):
-    '''rpnexpr : rpnexpr number
+    """rpnexpr : rpnexpr number
                | rpnexpr operator
                | rpnexpr function
                | rpnexpr name
                | number
                | operator
                | function
-               | name'''
+               | name"""
     if len(p) == 2:
         p[0] = [p[1]]
     else:
         p[0] = p[1] + [p[2]]
 
+
 def p_number(p):
-    '''number : NUMBER
-              | REAL'''
+    """number : NUMBER
+              | REAL"""
     p[0] = ("number", p[1])
 
+
 def p_name(p):
-    '''name : NAME'''
+    """name : NAME"""
     p[0] = ("name", p[1])
 
+
 def p_operator(p):
-    '''operator : '+'
+    """operator : '+'
                 | '-'
                 | '*'
                 | '/'
                 | '%'
                 | POWER
-                | BESSEL '''
+                | BESSEL """
     p[0] = ("operator", p[1])
 
+
 def p_function(p):
-    '''function : FUNCTION'''
+    """function : FUNCTION"""
     p[0] = ("function", p[1])
 
+
 def p_relation(p):
-    '''relation : expression RELATION expression'''
+    """relation : expression RELATION expression"""
     p[0] = ("relation", p[2], p[1], p[3])
+
 
 def p_error(p):
     if p:
@@ -179,53 +211,49 @@ def p_error(p):
     else:
         print("Syntax error at EOF")
 
-import ply.yacc as yacc
-parser = yacc.yacc()
 
-import operator
-from scipy.special import jv
 arithmetic_operators = {
-    '+' : operator.add,
-    '-' : operator.sub,
-    '*' : operator.mul,
-    '/' : operator.truediv,
-    '%' : operator.mod,
-    '**' : operator.pow,
-    'j' : jv
+    '+': operator.add,
+    '-': operator.sub,
+    '*': operator.mul,
+    '/': operator.truediv,
+    '%': operator.mod,
+    '**': operator.pow,
+    'j': jv
 }
 
 relational_operators = {
-    '<' : operator.lt,
-    '>' : operator.gt,
-    '==' : operator.eq,
-    '!=' : operator.ne,
-    '<=' : operator.le,
-    '>=' : operator.ge
+    '<': operator.lt,
+    '>': operator.gt,
+    '==': operator.eq,
+    '!=': operator.ne,
+    '<=': operator.le,
+    '>=': operator.ge
 }
 
-import math
 functions = {
-    'sin' : math.sin,
-    'cos' : math.cos,
-    'tan' : math.tan,
-    'asin' : math.asin,
-    'acos' : math.acos,
-    'atan' : math.atan,
-    'log' : math.log10,
-    'ln' : math.log,
-    'exp' : math.exp
+    'sin': math.sin,
+    'cos': math.cos,
+    'tan': math.tan,
+    'asin': math.asin,
+    'acos': math.acos,
+    'atan': math.atan,
+    'log': math.log10,
+    'ln': math.log,
+    'exp': math.exp
 }
 
 custom_functions = {}
 
-def run(s):
-    stype = s[0]
-    sargs = s[1:]
+
+def run(input_string):
+    stype = input_string[0]
+    sargs = input_string[1:]
 
     if stype == "sequence":
         for statement in sargs[0]:
             run(statement)
-    
+
     elif stype == "statement":
         print(run(sargs[0]))
 
@@ -238,7 +266,7 @@ def run(s):
                 try:
                     stack.append(names[x[1]])
                 except LookupError:
-                    print("Incorrect variable name - %s!" %x[1])
+                    print("Incorrect variable name - %s!" % x[1])
                     stack.append(0)
             elif x[0] == "operator":
                 second_number = stack.pop()
@@ -248,7 +276,7 @@ def run(s):
             elif x[0] == "function":
                 argument = stack.pop()
                 stack.append(functions[x[1]](argument))
-        
+
         if len(stack) == 0:
             print("Incorrect expression!")
         else:
@@ -271,50 +299,48 @@ def run(s):
             run(sargs[1])
         elif len(sargs) == 3:
             run(sargs[2])
-    
+
     elif stype == "while":
         condition = run(sargs[0])
         while condition:
             run(sargs[1])
             condition = run(sargs[0])
-    
+
     elif stype == "for":
         run(sargs[0])
 
         while run(sargs[1]):
             run(sargs[3])
             run(sargs[2])
-    
+
     elif stype == "customfunc":
         custom_functions[sargs[0]] = sargs[1]
-    
+
     elif stype == "call":
         try:
             func = custom_functions[sargs[0]]
             run(func)
         except LookupError:
             print("Incorrect function name!")
-        
-while True:
-    try:
-        equals_number = 0
-        s = input('calc > ')
-    except EOFError:
-        break
-    if not s:
-        continue
-    elif s.lower() == "exit":
-        break
 
-    p = yacc.parse(s)
-    print(p)
-    run(p)
-    #print(run(p))
-    '''
-    lexer.input(s)
-    while True:
-        tok = lexer.token()
-        if not tok:
-            break
-        print(tok)
-    '''
+
+if __name__ == '__main__':
+    lexer = lex.lex()
+    parser = yacc.yacc()
+
+    continue_reading = True
+    while continue_reading:
+        s = None
+        try:
+            equals_number = 0
+            s = input('calc > ')
+        except EOFError:
+            continue_reading = False
+        if not s:
+            continue
+        elif s.lower() == "exit":
+            continue_reading = False
+
+        if continue_reading:
+            parsed_input = yacc.parse(s)
+            run(parsed_input)

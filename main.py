@@ -3,7 +3,6 @@ import argparse
 from graphviz import Digraph
 
 import compiler.tree_printer
-from compiler.errors import *
 from compiler.lexer import Lexer
 from compiler.names import Scope
 from compiler.parser import Parser
@@ -24,40 +23,20 @@ def print_tokens(code):
 
 
 def run(code, opt, ast_file_name=None, repl_mode=False):
-    if repl_mode:
+    if repl_mode and code[-1] != ";":
         code += ";"
 
     res = parser.parse(lexer, code)
-    try:
-        if repl_mode:
-            statements = res.statement_list
-            for statement in statements:
-                statement_result = statement.execute(scope, opt)
-                if statement_result is not None:
-                    print(statement_result)
-        else:
-            res.execute(scope, opt)
 
-        if ast_file_name:
-            graph = Digraph(format="png")
-            res.print_tree(graph)
-            graph.render(ast_file_name)
+    if repl_mode:
+        res.activate_repl_mode()
 
-    except BinaryOperationError as err:
-        msg, = err.args
-        print("Error with binary operation: {}".format(msg))
-    except ConditionError as err:
-        msg, = err.args
-        print("Error with given condition: {}".format(msg))
-    except ConversionError as err:
-        msg, = err.args
-        print("Error with conversion: {}".format(msg))
-    except AssignmentError as err:
-        msg, = err.args
-        print("Error with assignment: {}".format(msg))
-    except ValueError as err:
-        msg, = err.args
-        print("Value Error: {}".format(msg))
+    res.execute(scope, opt)
+
+    if ast_file_name:
+        graph = Digraph(format="png")
+        res.print_tree(graph)
+        graph.render(ast_file_name)
 
 
 def interpret_file(file_name, ast_file_name, opt):
