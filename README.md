@@ -82,8 +82,7 @@ aa
 4. Conditional expressions and loops
 ```
 calc > int x := 10;
-calc > if(x < 0) { print("x is less than 0"); } 
-else { print("x is bigger than 0"); }
+calc > if(x < 0) { print("x is less than 0"); } else { print("x is bigger than 0"); }
 x is bigger than 0
 calc > while(x > 0) { --x; }
 calc > print(x)
@@ -120,9 +119,7 @@ calc > booleantoreal(true)
 
 6. Custom functions and procedures
 ```
-calc > function multiply(int x, int y) { 
-print("Multiplying..."); 
-} return x * y
+calc > function multiply(int x, int y) { print("Multiplying..."); } return x * y
 calc > multiply(10, 5)
 Multiplying...
 50
