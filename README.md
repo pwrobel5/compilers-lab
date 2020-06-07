@@ -2,7 +2,7 @@
 
 Project of compiler made during laboratories from Compilers academic course.
 
-# Repositorium structure
+# Repository structure
 
 * ```main.py``` - main module of compiler
 * ```compiler/lexer.py``` - module for performing lexical analysis
