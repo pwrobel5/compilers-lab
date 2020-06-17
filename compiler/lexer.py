@@ -28,7 +28,8 @@ class Lexer:
         'booleantoreal': 'BOOLEANTOREAL',
         'strtoint': 'STRTOINT',
         'strtoreal': 'STRTOREAL',
-        'strtoboolean': 'STRTOBOOLEAN'
+        'strtoboolean': 'STRTOBOOLEAN',
+        'parallel': 'PARALLEL'
     }
     tokens = ['INCR', 'DECR', 'ADD', 'SUB', 'MUL', 'DIV', 'MOD',
               'POW', 'EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE', 'AND', 'OR', 'XOR',

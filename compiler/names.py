@@ -1,3 +1,5 @@
+import threading
+
 from compiler.errors import AssignmentError, ExpressionResultSavingError
 
 
@@ -192,62 +194,78 @@ class Scope:
         self._functions = [FunctionsDict()]
         self._names = [NamesDict()]
         self._expressions = ExpressionSet()
+        self._lock = threading.RLock()
 
     def start_new(self):
-        self._functions.append(FunctionsDict())
-        self._names.append(NamesDict())
+        with self._lock:
+            self._functions.append(FunctionsDict())
+            self._names.append(NamesDict())
 
     def end_current(self):
-        self._functions.pop()
-        self._names.pop()
+        with self._lock:
+            self._functions.pop()
+            self._names.pop()
 
     def declare_function(self, name, arg_list, body, returned_value):
-        self._functions[-1].declare(name, arg_list, body, returned_value)
+        with self._lock:
+            self._functions[-1].declare(name, arg_list, body, returned_value)
 
     def read_function(self, name):
-        for functions_dict in reversed(self._functions):
-            if functions_dict.contains(name):
-                return functions_dict.read(name)
+        with self._lock:
+            for functions_dict in reversed(self._functions):
+                if functions_dict.contains(name):
+                    return functions_dict.read(name)
 
-        raise ValueError("Function {} not declared in any scope".format(name))
+            raise ValueError("Function {} not declared in any scope".format(name))
 
     def get_unused_functions(self):
-        function_scope = self._functions[-1].dict
-        return {k: v for k, v in function_scope.items() if not v.used}
+        with self._lock:
+            function_scope = self._functions[-1].dict
+            return {k: v for k, v in function_scope.items() if not v.used}
 
     def declare_name(self, name, value_type, value):
-        self._names[-1].declare(name, value_type, value)
+        with self._lock:
+            self._names[-1].declare(name, value_type, value)
 
     def get_dict_index_for_name(self, name):
-        for names_dict in reversed(self._names):
-            if names_dict.contains(name):
-                return self._names.index(names_dict)
+        with self._lock:
+            for names_dict in reversed(self._names):
+                if names_dict.contains(name):
+                    return self._names.index(names_dict)
 
-        raise ValueError("Name {} not declared in any scope".format(name))
+            raise ValueError("Name {} not declared in any scope".format(name))
 
     def assign_name(self, name, value):
-        index = self.get_dict_index_for_name(name)
-        self._names[index].assign(name, value)
+        with self._lock:
+            index = self.get_dict_index_for_name(name)
+            self._names[index].assign(name, value)
 
     def read_name(self, name):
-        index = self.get_dict_index_for_name(name)
-        return self._names[index].read(name)
+        with self._lock:
+            index = self.get_dict_index_for_name(name)
+            return self._names[index].read(name)
 
     def get_unused_names(self):
-        name_scope = self._names[-1].dict
-        return {k: v for k, v in name_scope.items() if not v.used}
+        with self._lock:
+            name_scope = self._names[-1].dict
+            return {k: v for k, v in name_scope.items() if not v.used}
 
     def add_expression(self, expression):
-        self._expressions.add(expression)
+        with self._lock:
+            self._expressions.add(expression)
 
     def get_expression(self, expression):
-        return self._expressions.get_if_declared(expression)
+        with self._lock:
+            return self._expressions.get_if_declared(expression)
 
     def get_expression_occurrence(self, expression):
-        return self._expressions.get_occurrences(expression)
+        with self._lock:
+            return self._expressions.get_occurrences(expression)
 
     def save_expression_result(self, expression, result):
-        self._expressions.save_result(expression, result)
+        with self._lock:
+            self._expressions.save_result(expression, result)
 
     def get_expression_result(self, expression):
-        return self._expressions.get_result(expression)
+        with self._lock:
+            return self._expressions.get_result(expression)

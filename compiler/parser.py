@@ -108,7 +108,8 @@ class Parser:
                      | assignment
                      | customfunc
                      | procedure
-                     | print"""
+                     | print
+                     | parallel"""
         p[0] = p[1]
 
     def p_block(self, p):
@@ -150,6 +151,10 @@ class Parser:
     def p_print(self, p):
         """print : PRINT '(' expression ')' """
         p[0] = ast.Print(p[3])
+
+    def p_parallel(self, p):
+        """parallel : PARALLEL '(' statement_set ')'"""
+        p[0] = ast.Parallel(p[3])
 
     def p_repeat_until(self, p):
         """loop : REPEAT statement UNTIL '(' expression ')'

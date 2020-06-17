@@ -1,4 +1,5 @@
 import abc
+import threading
 
 from compiler.errors import *
 
@@ -13,6 +14,27 @@ class Node(object):
     @abc.abstractmethod
     def execute(self, scope, opt):
         pass
+
+    def execute_and_handle_errors(self, scope, opt):
+        try:
+            return self.execute(scope, opt)
+        except BinaryOperationError as err:
+            msg, = err.args
+            print("Error with binary operation: {}".format(msg))
+        except ConditionError as err:
+            msg, = err.args
+            print("Error with given condition: {}".format(msg))
+        except ConversionError as err:
+            msg, = err.args
+            print("Error with conversion: {}".format(msg))
+        except AssignmentError as err:
+            msg, = err.args
+            print("Error with assignment: {}".format(msg))
+        except ValueError as err:
+            msg, = err.args
+            print("Value Error: {}".format(msg))
+        except:
+            print("Unrecognized error")
 
     @staticmethod
     def remove_needless_statements(statement_list, scope):
@@ -36,29 +58,10 @@ class Program(Node):
 
     def execute(self, scope, opt):
         for statement in self._statement_list:
-            try:
-                result = statement.execute(scope, opt)
+            result = statement.execute_and_handle_errors(scope, opt)
 
-                if self._repl_mode and result is not None:
-                    print(result)
-
-            except BinaryOperationError as err:
-                msg, = err.args
-                print("Error with binary operation: {}".format(msg))
-            except ConditionError as err:
-                msg, = err.args
-                print("Error with given condition: {}".format(msg))
-            except ConversionError as err:
-                msg, = err.args
-                print("Error with conversion: {}".format(msg))
-            except AssignmentError as err:
-                msg, = err.args
-                print("Error with assignment: {}".format(msg))
-            except ValueError as err:
-                msg, = err.args
-                print("Value Error: {}".format(msg))
-            except:
-                print("Unrecognized error")
+            if self._repl_mode and result is not None:
+                print(result)
 
         if opt:
             self._statement_list = Node.remove_needless_statements(self._statement_list, scope)
@@ -142,6 +145,21 @@ class Print(Node):
     def __eq__(self, other):
         return isinstance(other, Print) and \
                self.expression == other.expression
+
+
+class Parallel(Node):
+    def __init__(self, statement_list):
+        self._statement_list = statement_list
+
+    def execute(self, scope, opt):
+        thread_list = []
+        for statement in self._statement_list:
+            statement_thread = threading.Thread(target=statement.execute_and_handle_errors, args=(scope, opt))
+            statement_thread.start()
+            thread_list.append(statement_thread)
+
+        for statement_thread in thread_list:
+            statement_thread.join()
 
 
 class RepeatUntil(Node):
