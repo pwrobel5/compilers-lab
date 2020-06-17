@@ -1,4 +1,5 @@
 import abc
+import copy
 import threading
 
 from compiler.errors import *
@@ -10,6 +11,13 @@ class Node(object):
     @property
     def id(self):
         return str(id(self))
+
+    @abc.abstractmethod
+    def get_used_names(self):
+        pass
+
+    def get_declared_names(self):
+        return []
 
     @abc.abstractmethod
     def execute(self, scope, opt):
@@ -56,6 +64,18 @@ class Program(Node):
         self._statement_list = statement_list
         self._repl_mode = False
 
+    def get_used_names(self):
+        result = []
+        for statement in self._statement_list:
+            result += statement.get_used_names()
+        return result
+
+    def get_declared_names(self):
+        result = []
+        for statement in self._statement_list:
+            result += statement.get_declared_names()
+        return result
+
     def execute(self, scope, opt):
         for statement in self._statement_list:
             result = statement.execute_and_handle_errors(scope, opt)
@@ -78,6 +98,20 @@ class Block(Node):
     def __init__(self, statement_list):
         self._statement_list = statement_list
 
+    def get_used_names(self):
+        used_names = []
+        declared_names = self.get_declared_names()
+
+        for statement in self._statement_list:
+            used_names += statement.get_used_names()
+        return [name for name in used_names if name not in declared_names]
+
+    def get_declared_names(self):
+        result = []
+        for statement in self._statement_list:
+            result += statement.get_declared_names()
+        return result
+
     def execute(self, scope, opt):
         for statement in self._statement_list:
             statement.execute(scope, opt)
@@ -89,6 +123,12 @@ class Block(Node):
 class FunctionArgumentList(Node):
     def __init__(self, arguments):
         self._arguments = arguments
+
+    def get_used_names(self):
+        result = []
+        for argument in self._arguments:
+            result += argument.get_used_names()
+        return result
 
     def execute(self, scope, opt):
         result = []
@@ -105,6 +145,9 @@ class FunctionArgument(Node):
         self._name = arg_name
         self._type = arg_type
 
+    def get_used_names(self):
+        return [self._name.get_used_names()]
+
     def execute(self, scope, opt):
         return self._name, self._type
 
@@ -115,6 +158,12 @@ class CustomFunction(Node):
         self._arg_list = arg_list
         self._body = body
         self._returned_value = returned_value
+
+    def get_used_names(self):
+        return self._body.get_used_names() + self._returned_value.get_used_names()
+
+    def get_declared_names(self):
+        return [self._name]
 
     def execute(self, scope, opt):
         scope.declare_function(self._name, self._arg_list, self._body, self._returned_value)
@@ -127,6 +176,9 @@ class CustomFunction(Node):
 class Print(Node):
     def __init__(self, expression):
         self._expression = expression
+
+    def get_used_names(self):
+        return self._expression.get_used_names()
 
     def execute(self, scope, opt):
         result = self._expression.execute(scope, opt)
@@ -151,6 +203,18 @@ class Parallel(Node):
     def __init__(self, statement_list):
         self._statement_list = statement_list
 
+    def get_used_names(self):
+        result = []
+        for statement in self._statement_list:
+            result += statement.get_used_names()
+        return result
+
+    def get_declared_names(self):
+        result = []
+        for statement in self._statement_list:
+            result += statement.get_declared_names()
+        return result
+
     def execute(self, scope, opt):
         thread_list = []
         for statement in self._statement_list:
@@ -167,18 +231,23 @@ class RepeatUntil(Node):
         self._block = block
         self._condition = condition
 
+    def get_used_names(self):
+        return self._block.get_used_names() + self._condition.get_used_names()
+
     def execute(self, scope, opt):
         scope.start_new()
         self._block.execute(scope, opt)
+        scope.end_current()
 
         condition = self._condition.execute(scope, opt)
         if not isinstance(condition, bool):
             raise ConditionError("Given repeat-until condition is not bool")
 
         while not condition:
+            scope.start_new()
             self._block.execute(scope, opt)
+            scope.end_current()
             condition = self._condition.execute(scope, opt)
-        scope.end_current()
 
 
 class For(Node):
@@ -188,19 +257,59 @@ class For(Node):
         self._step_assignment = step_assignment
         self._block = block
 
+    def get_used_names(self):
+        return self._initial_assignment.get_used_names() + \
+               self._condition.get_used_names() + \
+               self._step_assignment.get_used_names() + \
+               self._block.get_used_names()
+
     def execute(self, scope, opt):
         self._initial_assignment.execute(scope, opt)
+
+        execute_parallel = False
+        if isinstance(self._block, Block):
+            used_names = self._block.get_used_names()
+            if len(used_names) == 0:
+                execute_parallel = True
+
+        if execute_parallel:
+            self.__execute_parallel(scope, opt)
+        else:
+            self.__execute_sequential(scope, opt)
+
+    def __execute_parallel(self, scope, opt):
+        print("Running loop in parallel way")
 
         condition = self._condition.execute(scope, opt)
         if not isinstance(condition, bool):
             raise ConditionError("Given for condition is not bool")
 
-        scope.start_new()
+        threads = []
         while condition:
-            self._block.execute(scope, opt)
+            scope_copy = copy.copy(scope)
+            scope_copy.start_new()
+
+            for_thread = threading.Thread(target=self._block.execute, args=(scope_copy, opt))
+            for_thread.start()
+            threads.append(for_thread)
+
             self._step_assignment.execute(scope, opt)
             condition = self._condition.execute(scope, opt)
-        scope.end_current()
+
+        for thread in threads:
+            thread.join()
+
+    def __execute_sequential(self, scope, opt):
+        condition = self._condition.execute(scope, opt)
+        if not isinstance(condition, bool):
+            raise ConditionError("Given for condition is not bool")
+
+        while condition:
+            scope.start_new()
+            self._block.execute(scope, opt)
+            scope.end_current()
+            self._step_assignment.execute(scope, opt)
+            condition = self._condition.execute(scope, opt)
 
 
 class While(Node):
@@ -208,16 +317,19 @@ class While(Node):
         self._condition = condition
         self._block = block
 
+    def get_used_names(self):
+        return self._condition.get_used_names() + self._block.get_used_names()
+
     def execute(self, scope, opt):
         condition = self._condition.execute(scope, opt)
         if not isinstance(condition, bool):
             raise ConditionError("Given while condition is not bool")
 
-        scope.start_new()
         while condition:
+            scope.start_new()
             self._block.execute(scope, opt)
+            scope.end_current()
             condition = self._condition.execute(scope, opt)
-        scope.end_current()
 
 
 class ConditionalIfElse(Node):
@@ -225,6 +337,9 @@ class ConditionalIfElse(Node):
         self._condition = condition
         self._block_if = block_if
         self._block_else = block_else
+
+    def get_used_names(self):
+        return self._condition.get_used_names() + self._block_if.get_used_names() + self._block_else.get_used_names()
 
     def execute(self, scope, opt):
         condition = self._condition.execute(scope, opt)
@@ -244,6 +359,9 @@ class ConditionalIf(Node):
         self._condition = condition
         self._statement = statement
 
+    def get_used_names(self):
+        return self._condition.get_used_names() + self._statement.get_used_names()
+
     def execute(self, scope, opt):
         condition = self._condition.execute(scope, opt)
         if not isinstance(condition, bool):
@@ -258,6 +376,12 @@ class ConditionalIf(Node):
 class CallArgumentList(Node):
     def __init__(self, arguments):
         self._arguments = arguments
+
+    def get_used_names(self):
+        result = []
+        for argument in self._arguments:
+            result += argument.get_used_names()
+        return result
 
     def execute(self, scope, opt):
         result = []
@@ -279,6 +403,9 @@ class Call(Node):
     def __init__(self, function_name, arg_list):
         self._function_name = function_name
         self._arg_list = arg_list
+
+    def get_used_names(self):
+        return [self._function_name.get_used_names()] + self._arg_list.get_used_names()
 
     def execute(self, scope, opt):
         function = scope.read_function(self._function_name)
@@ -317,6 +444,9 @@ class PreFixExpression(Node):
         self._name = name
         self._operation = operation
 
+    def get_used_names(self):
+        return [self._name.get_used_names()]
+
     def execute(self, scope, opt):
         value, _ = scope.read_name(self._name)
 
@@ -334,6 +464,9 @@ class PostFixExpression(Node):
         self._name = name
         self._operation = operation
 
+    def get_used_names(self):
+        return [self._name.get_used_names()]
+
     def execute(self, scope, opt):
         value, _ = scope.read_name(self._name)
 
@@ -350,6 +483,9 @@ class BuiltInFunction(Node):
         self._function = function
         self._arguments = arguments
 
+    def get_used_names(self):
+        return self._arguments.get_used_names()
+
     def execute(self, scope, opt):
         executed_arguments = self._arguments.execute(scope, opt)
         return self._function(*executed_arguments)
@@ -359,6 +495,9 @@ class Assignment(Node):
     def __init__(self, name, value):
         self._name = name
         self._value = value
+
+    def get_used_names(self):
+        return self._name.get_used_names()
 
     def execute(self, scope, opt):
         executed_value = self._value.execute(scope, opt)
@@ -379,6 +518,9 @@ class Minus(Node):
     def __init__(self, value):
         self._value = value
 
+    def get_used_names(self):
+        return self._value.get_used_names()
+
     def execute(self, scope, opt):
         executed_value = self._value.execute(scope, opt)
 
@@ -395,6 +537,15 @@ class Declaration(Node):
         self._name = name
         self._value_type = value_type
         self._value = value
+
+    def get_used_names(self):
+        if self._value is not None:
+            return self._value.get_used_names()
+        else:
+            return []
+
+    def get_declared_names(self):
+        return [self._name]
 
     def execute(self, scope, opt):
         if self._value is not None:
@@ -420,6 +571,9 @@ class Conversion(Node):
         self._operation = operation
         self._value = value
 
+    def get_used_names(self):
+        return self._value.get_used_names()
+
     def execute(self, scope, opt):
         value = self._value.execute(scope, opt)
 
@@ -440,6 +594,9 @@ class BinaryOperation(Node):
         self._left = left
         self._operation, self._is_reversible = operation
         self._right = right
+
+    def get_used_names(self):
+        return self._left.get_used_names() + self._right.get_used_names()
 
     def execute(self, scope, opt):
         left = self._left.execute(scope, opt)
@@ -491,6 +648,9 @@ class Real(Node):
     def __init__(self, value):
         self._value = value
 
+    def get_used_names(self):
+        return []
+
     def execute(self, scope, opt):
         return self._value
 
@@ -509,6 +669,9 @@ class Real(Node):
 class Integer(Node):
     def __init__(self, value):
         self._value = value
+
+    def get_used_names(self):
+        return []
 
     def execute(self, scope, opt):
         return self._value
@@ -529,6 +692,9 @@ class Boolean(Node):
     def __init__(self, value):
         self._value = value
 
+    def get_used_names(self):
+        return []
+
     def execute(self, scope, opt):
         return self._value
 
@@ -544,6 +710,9 @@ class Boolean(Node):
 class String(Node):
     def __init__(self, value):
         self._value = value
+
+    def get_used_names(self):
+        return []
 
     def execute(self, scope, opt):
         return self._value
@@ -564,6 +733,9 @@ class Name(Node):
     def __init__(self, name):
         self._name = name
         self._changes = None  # to not include name in common subexpressions after variable modification
+
+    def get_used_names(self):
+        return [self._name]
 
     def execute(self, scope, opt):
         value, changes = scope.read_name(self._name)

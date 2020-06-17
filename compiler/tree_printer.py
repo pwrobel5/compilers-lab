@@ -43,7 +43,6 @@ class TreePrinter:
     @add_to_class(ast.CustomFunction)
     def print_tree(self, graph):
         graph.node(self.id, "Function {}".format(self._name))
-        graph.node(self.id, "Function {}".format(self._name))
         graph.edge(self.id, self._arg_list.print_tree(graph), "Arguments")
         graph.edge(self.id, self._body.print_tree(graph), "Body")
         if self._returned_value:
@@ -55,6 +54,14 @@ class TreePrinter:
     def print_tree(self, graph):
         graph.node(self.id, "Print")
         graph.edge(self.id, self._expression.print_tree(graph), "Expression")
+        return self.id
+
+    @add_to_class(ast.Parallel)
+    def print_tree(self, graph):
+        graph.node(self.id, "Parallel")
+        for statement in self._statement_list:
+            graph.edge(self.id, statement.print_tree(graph))
+
         return self.id
 
     @add_to_class(ast.RepeatUntil)
