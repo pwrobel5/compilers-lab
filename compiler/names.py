@@ -1,5 +1,7 @@
 import threading
 
+import numpy as np
+
 from compiler.errors import AssignmentError, ExpressionResultSavingError
 
 
@@ -39,6 +41,13 @@ class NamesDict:
         "str": ""
     }
 
+    np_types = {
+        "int": np.int,
+        "float": np.float,
+        "bool": np.bool,
+        "str": np.str
+    }
+
     def __init__(self):
         self._dict = {}
 
@@ -46,7 +55,7 @@ class NamesDict:
     def dict(self):
         return self._dict
 
-    def declare(self, name, value_type, value):
+    def declare(self, name, value_type, value, array_size=None):
         if value is None:
             value = self.defaults[value_type.__name__]
 
@@ -58,10 +67,14 @@ class NamesDict:
             raise AssignmentError("Value of wrong type assigned to {}. Expected {} given {}"
                                   .format(name, value_type.__name__, type(value).__name__))
 
-        declared_name = DeclaredName(value_type, value)
+        if array_size is None:
+            declared_name = DeclaredName(value_type, value)
+        else:
+            value = np.zeros(array_size, dtype=self.np_types[value_type.__name__])
+            declared_name = DeclaredName(value_type, value)
         self._dict[name] = declared_name
 
-    def assign(self, name, value):
+    def assign(self, name, value, array_index=None):
         if name not in self._dict:
             raise ValueError("Variable not defined!")
 
@@ -70,14 +83,30 @@ class NamesDict:
             raise AssignmentError("Value of wrong type assigned to {}. Expected {} given {}"
                                   .format(name, expected_type.__name__, type(value).__name__))
 
-        self._dict[name].value = value
+        if array_index is None:
+            self._dict[name].value = value
+        else:
+            array, _ = self._dict[name].value
+            shape = array.shape
+            if len(array_index) != len(shape):
+                raise ValueError("Given indices number does not match dimension of an array")
 
-    def read(self, name):
+            flattened_index = np.ravel_multi_index(array_index, shape)
+            np.put(array, flattened_index, value)
+
+    def read(self, name, array_index=None):
         if name not in self._dict:
             raise ValueError("Variable not defined!")
 
         self._dict[name].mark_as_used()
-        return self._dict[name].value
+
+        result, changes = self._dict[name].value
+        if array_index is None:
+            return result, changes
+        else:
+            for index in array_index:
+                result = result[index]
+            return result, changes
 
     def contains(self, name):
         return name in self._dict
@@ -223,9 +252,9 @@ class Scope:
             function_scope = self._functions[-1].dict
             return {k: v for k, v in function_scope.items() if not v.used}
 
-    def declare_name(self, name, value_type, value):
+    def declare_name(self, name, value_type, value=None, array_size=None):
         with self._lock:
-            self._names[-1].declare(name, value_type, value)
+            self._names[-1].declare(name, value_type, value, array_size)
 
     def get_dict_index_for_name(self, name):
         with self._lock:
@@ -235,15 +264,15 @@ class Scope:
 
             raise ValueError("Name {} not declared in any scope".format(name))
 
-    def assign_name(self, name, value):
+    def assign_name(self, name, value, array_index=None):
         with self._lock:
             index = self.get_dict_index_for_name(name)
-            self._names[index].assign(name, value)
+            self._names[index].assign(name, value, array_index)
 
-    def read_name(self, name):
+    def read_name(self, name, array_index=None):
         with self._lock:
             index = self.get_dict_index_for_name(name)
-            return self._names[index].read(name)
+            return self._names[index].read(name, array_index)
 
     def get_unused_names(self):
         with self._lock:

@@ -210,8 +210,12 @@ class Parser:
         p[0] = ast.BuiltInFunction(self.built_in_functions[p[1]], p[3])
 
     def p_assignment(self, p):
-        """assignment : NAME ASSIGN expression"""
-        p[0] = ast.Assignment(p[1], p[3])
+        """assignment : NAME ASSIGN expression
+                      | NAME array_size ASSIGN expression"""
+        if len(p) == 4:
+            p[0] = ast.Assignment(p[1], p[3])
+        elif len(p) == 5:
+            p[0] = ast.Assignment(p[1], p[4], index=p[2])
 
     def p_expression_uminus(self, p):
         """expression : SUB expression %prec UMINUS"""
@@ -223,11 +227,22 @@ class Parser:
 
     def p_declaration(self, p):
         """declaration : TYPE NAME
+                       | TYPE NAME array_size
                        | TYPE NAME ASSIGN expression"""
         if len(p) == 3:
             p[0] = ast.Declaration(p[2], self.types[p[1]])
+        elif len(p) == 4:
+            p[0] = ast.Declaration(p[2], self.types[p[1]], array_size=p[3])
         elif len(p) == 5:
             p[0] = ast.Declaration(p[2], self.types[p[1]], p[4])
+
+    def p_array_size(self, p):
+        """array_size : '[' expression ']'
+                      | '[' expression ']' array_size"""
+        if len(p) == 4:
+            p[0] = [p[2]]
+        elif len(p) == 5:
+            p[0] = [p[2]] + p[4]
 
     def p_expression_conversion(self, p):
         """expression : INTTOSTR '(' expression ')'
@@ -344,8 +359,12 @@ class Parser:
         p[0] = ast.String(p[1])
 
     def p_expression_name(self, p):
-        """expression : NAME"""
-        p[0] = ast.Name(p[1])
+        """expression : NAME
+                      | NAME array_size"""
+        if len(p) == 2:
+            p[0] = ast.Name(p[1])
+        elif len(p) == 3:
+            p[0] = ast.Name(p[1], p[2])
 
     def p_error(self, p):
         if p:

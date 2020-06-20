@@ -41,8 +41,11 @@ class Node(object):
         except ValueError as err:
             msg, = err.args
             print("Value Error: {}".format(msg))
-        except:
-            print("Unrecognized error")
+        except IndexError as err:
+            msg, = err.args
+            print("Index error when using array type: {}".format(msg))
+        """except:
+            print("Unrecognized error")"""
 
     @staticmethod
     def remove_needless_statements(statement_list, scope):
@@ -492,9 +495,10 @@ class BuiltInFunction(Node):
 
 
 class Assignment(Node):
-    def __init__(self, name, value):
+    def __init__(self, name, value, index=None):
         self._name = name
         self._value = value
+        self._index = index
 
     def get_used_names(self):
         return self._name.get_used_names()
@@ -507,7 +511,10 @@ class Assignment(Node):
             if saved_value is not None:
                 self._value = saved_value
 
-        scope.assign_name(self._name, executed_value)
+        if self._index is not None:
+            self._index = get_indices(self._index, scope, opt)
+
+        scope.assign_name(self._name, executed_value, self._index)
 
     @property
     def name(self):
@@ -533,10 +540,11 @@ class Minus(Node):
 
 
 class Declaration(Node):
-    def __init__(self, name, value_type, value=None):
+    def __init__(self, name, value_type, value=None, array_size=None):
         self._name = name
         self._value_type = value_type
         self._value = value
+        self._array_size = array_size
 
     def get_used_names(self):
         if self._value is not None:
@@ -556,7 +564,11 @@ class Declaration(Node):
                 if saved_value is not None:
                     self._value = saved_value
 
-            scope.declare_name(self._name, self._value_type, executed_value)
+            scope.declare_name(self._name, self._value_type, value=executed_value)
+        elif self._array_size is not None:
+            self._array_size = get_indices(self._array_size, scope, opt)
+
+            scope.declare_name(self._name, self._value_type, array_size=self._array_size)
         else:
             scope.declare_name(self._name, self._value_type, None)
 
@@ -730,15 +742,19 @@ class String(Node):
 
 
 class Name(Node):
-    def __init__(self, name):
+    def __init__(self, name, index=None):
         self._name = name
         self._changes = None  # to not include name in common subexpressions after variable modification
+        self._index = index
 
     def get_used_names(self):
         return [self._name]
 
     def execute(self, scope, opt):
-        value, changes = scope.read_name(self._name)
+        if self._index is not None:
+            self._index = get_indices(self._index, scope, opt)
+
+        value, changes = scope.read_name(self._name, self._index)
         self._changes = changes
         return value
 
@@ -750,10 +766,26 @@ class Name(Node):
     def changes(self):
         return self._changes
 
+    @property
+    def index(self):
+        return self._index
+
     def __eq__(self, other):
         return isinstance(other, Name) and \
                self.name == other.name and \
-               self.changes == other.changes
+               self.changes == other.changes and \
+               self.index == other._index
 
     def __hash__(self):
         return hash((self._name, self._changes))
+
+
+def get_indices(index_list, scope, opt):
+    executed_indices = []
+    for element in index_list:
+        executed_indices.append(element.execute(scope, opt))
+
+    if any(not isinstance(element, int) for element in executed_indices):
+        raise ValueError("Array indices must be integer")
+
+    return executed_indices
